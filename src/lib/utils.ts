@@ -5,16 +5,75 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+// ─── خريطة العملات الخليجية وعدد الكسور الصحيحة ───────────────
+// 3 كسور: OMR (عُمان)، KWD (الكويت)، BHD (البحرين)، JOD (الأردن)
+// 2 كسور: SAR (السعودية)، AED (الإمارات)، QAR (قطر)، EGP (مصر)
+const CURRENCY_DECIMALS: Record<string, number> = {
+  OMR: 3,  // ريال عماني — الفلس (0.001)
+  KWD: 3,  // دينار كويتي — الفلس (0.001)
+  BHD: 3,  // دينار بحريني — الفلس (0.001)
+  JOD: 3,  // دينار أردني — الفلس (0.001)
+  SAR: 2,  // ريال سعودي — الهللة (0.01)
+  AED: 2,  // درهم إماراتي — الفلس (0.01)
+  QAR: 2,  // ريال قطري — الدرهم (0.01)
+  EGP: 2,  // جنيه مصري — القرش (0.01)
+  USD: 2,
+  EUR: 2,
+};
+
+// رموز العملات بالعربية
+export const CURRENCY_SYMBOLS: Record<string, string> = {
+  OMR: "ر.ع",
+  KWD: "د.ك",
+  BHD: "د.ب",
+  JOD: "د.أ",
+  SAR: "ر.س",
+  AED: "د.إ",
+  QAR: "ر.ق",
+  EGP: "ج.م",
+  USD: "$",
+  EUR: "€",
+};
+
+// تخمين العملة من كود الدولة
+export const COUNTRY_CURRENCY: Record<string, string> = {
+  "+968": "OMR",  // عُمان
+  "+966": "SAR",  // السعودية
+  "+971": "AED",  // الإمارات
+  "+965": "KWD",  // الكويت
+  "+974": "QAR",  // قطر
+  "+973": "BHD",  // البحرين
+  "+962": "JOD",  // الأردن
+  "+20":  "EGP",  // مصر
+};
+
+export function getCurrencyDecimals(currency = "OMR"): number {
+  return CURRENCY_DECIMALS[currency] ?? 2;
+}
+
 export function formatCurrency(amount: number, currency = "OMR"): string {
-  return new Intl.NumberFormat("ar-OM", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 3,
-  }).format(amount);
+  const decimals = getCurrencyDecimals(currency);
+  try {
+    return new Intl.NumberFormat("ar-SA", {
+      style: "currency",
+      currency,
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }).format(amount);
+  } catch {
+    // fallback لو الـ currency code غير صحيح
+    const sym = CURRENCY_SYMBOLS[currency] ?? currency;
+    return `${amount.toFixed(decimals)} ${sym}`;
+  }
+}
+
+// تنسيق بسيط بدون رمز العملة
+export function formatAmount(amount: number, currency = "OMR"): string {
+  return amount.toFixed(getCurrencyDecimals(currency));
 }
 
 export function formatDate(dateStr: string): string {
-  return new Intl.DateTimeFormat("ar-OM", {
+  return new Intl.DateTimeFormat("ar-SA", {
     year: "numeric",
     month: "long",
     day: "numeric",
@@ -22,7 +81,7 @@ export function formatDate(dateStr: string): string {
 }
 
 export function formatDateShort(dateStr: string): string {
-  return new Intl.DateTimeFormat("ar-OM", {
+  return new Intl.DateTimeFormat("ar-SA", {
     month: "short",
     day: "numeric",
   }).format(new Date(dateStr));
@@ -54,4 +113,3 @@ export function getDaysLeft(targetDate: string): number {
   const diff = target.getTime() - now.getTime();
   return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
-

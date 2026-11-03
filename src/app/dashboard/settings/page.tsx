@@ -4,12 +4,14 @@ import { useState } from "react";
 import { loadUser, saveUser } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { useAppState } from "@/hooks/useAppState";
-import { formatCurrency } from "@/lib/utils";
+import { formatCurrency, CURRENCY_SYMBOLS } from "@/lib/utils";
 
 export default function SettingsPage() {
   const router = useRouter();
   const { resetData } = useAppState();
   const user = loadUser();
+  const currency = user?.currency ?? "OMR";
+  const currSymbol = CURRENCY_SYMBOLS[currency] ?? currency;
 
   // الملف الشخصي
   const [name, setName] = useState(user?.name ?? "");
@@ -102,7 +104,7 @@ export default function SettingsPage() {
           {/* الدخل */}
           <div>
             <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "5px" }}>
-              💰 الدخل الشهري (ر.ع)
+              💰 الدخل الشهري ({currSymbol})
             </label>
             <input className="input" type="number" placeholder="مثال: 800" value={monthlyIncome}
               onChange={e => setMonthlyIncome(e.target.value)} min="0" step="0.5" />
@@ -111,7 +113,7 @@ export default function SettingsPage() {
           {/* الالتزامات */}
           <div>
             <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "5px" }}>
-              🏠 الالتزامات الشهرية (ر.ع)
+              🏠 الالتزامات الشهرية ({currSymbol})
               <span style={{ fontWeight: 400, fontSize: "0.75rem" }}> — إيجار، أقساط، اشتراكات ثابتة</span>
             </label>
             <input className="input" type="number" placeholder="مثال: 200" value={monthlyObligations}
@@ -136,12 +138,12 @@ export default function SettingsPage() {
             <div style={{ background: "var(--surface-2)", borderRadius: "12px", padding: "12px 14px", border: "1px solid var(--border)" }}>
               <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "8px" }}>📋 ملخص ميزانيتك</div>
               <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                <BudgetRow label="الدخل الشهري" value={formatCurrency(incomeNum)} color="var(--green)" />
-                <BudgetRow label="الالتزامات" value={`− ${formatCurrency(obligationsNum)}`} color="#ef4444" />
-                <BudgetRow label="المتاح للإنفاق" value={formatCurrency(disposable)} color="var(--primary)" bold />
+                <BudgetRow label="الدخل الشهري" value={formatCurrency(incomeNum, currency)} color="var(--green)" />
+                <BudgetRow label="الالتزامات" value={`− ${formatCurrency(obligationsNum, currency)}`} color="#ef4444" />
+                <BudgetRow label="المتاح للإنفاق" value={formatCurrency(disposable, currency)} color="var(--primary)" bold />
                 <div style={{ borderTop: "1px solid var(--border)", marginTop: "4px", paddingTop: "6px" }}>
-                  <BudgetRow label={`هدف الادخار (${savingsPctNum}٪)`} value={formatCurrency(savingsTarget)} color="var(--teal)" />
-                  <BudgetRow label="ميزانية الإنفاق اليومية" value={formatCurrency(spendingBudget / 30)} color="var(--text)" />
+                  <BudgetRow label={`هدف الادخار (${savingsPctNum}٪)`} value={formatCurrency(savingsTarget, currency)} color="var(--teal)" />
+                  <BudgetRow label="ميزانية الإنفاق اليومية" value={formatCurrency(spendingBudget / 30, currency)} color="var(--text)" />
                 </div>
               </div>
             </div>
@@ -159,7 +161,7 @@ export default function SettingsPage() {
         <div style={{ display: "flex", flexDirection: "column", gap: "8px", fontSize: "0.875rem", color: "var(--text-muted)" }}>
           <InfoRow label="الإصدار" value="1.1.0" />
           <InfoRow label="التخزين" value="محلي (localStorage)" />
-          <InfoRow label="العملة" value="ريال عماني (OMR)" />
+          <InfoRow label="العملة" value={`${currSymbol} (${currency})`} />
           <InfoRow label="اللغة" value="العربية" />
         </div>
       </div>

@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { saveUser, loadUser } from "@/lib/store";
+import { COUNTRY_CURRENCY, CURRENCY_SYMBOLS } from "@/lib/utils";
 
 const COUNTRIES = [
   { code: "+968", flag: "🇴🇲", name: "عُمان" },
@@ -74,7 +75,7 @@ export default function LoginPage() {
     saveUser({
       phone: country.code + phone,
       name,
-      currency: "OMR",
+      currency: COUNTRY_CURRENCY[country.code] ?? "OMR",
       theme,
       monthlyIncome: income,
       monthlyObligations: obligations,
@@ -88,7 +89,7 @@ export default function LoginPage() {
     saveUser({
       phone: country.code + phone,
       name,
-      currency: "OMR",
+      currency: COUNTRY_CURRENCY[country.code] ?? "OMR",
       theme,
       monthlyIncome: 0,
       monthlyObligations: 0,
@@ -105,6 +106,8 @@ export default function LoginPage() {
     localStorage.setItem("wallet_theme", next);
   }
 
+  const currency = COUNTRY_CURRENCY[country.code] ?? "OMR";
+  const currSymbol = CURRENCY_SYMBOLS[currency] ?? currency;
   const incomeNum = parseFloat(monthlyIncome) || 0;
   const obligationsNum = parseFloat(monthlyObligations) || 0;
   const savingsPctNum = parseInt(savingsGoalPct) || 20;
@@ -190,10 +193,16 @@ export default function LoginPage() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "14px" }}>
+              {/* عملة الدولة */}
+              <div style={{ padding: "8px 12px", background: "var(--surface-2)", borderRadius: "8px", fontSize: "0.8rem", color: "var(--text-muted)", display: "flex", alignItems: "center", gap: "6px" }}>
+                <span>🌐</span>
+                <span>عملتك: <strong style={{ color: "var(--primary)" }}>{currency} ({currSymbol})</strong></span>
+              </div>
+
               {/* الدخل */}
               <div>
                 <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "5px" }}>
-                  💼 الدخل الشهري (ر.ع)
+                  💼 الدخل الشهري ({currSymbol})
                 </label>
                 <input className="input" type="number" placeholder="مثال: 800" value={monthlyIncome}
                   onChange={e => setMonthlyIncome(e.target.value)} min="0" step="0.5" />
@@ -202,7 +211,7 @@ export default function LoginPage() {
               {/* الالتزامات */}
               <div>
                 <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "var(--text-muted)", display: "block", marginBottom: "5px" }}>
-                  🏠 الالتزامات الشهرية (ر.ع) <span style={{ fontWeight: 400, fontSize: "0.75rem" }}>إيجار، أقساط، اشتراكات…</span>
+                  🏠 الالتزامات الشهرية ({currSymbol}) <span style={{ fontWeight: 400, fontSize: "0.75rem" }}>إيجار، أقساط، اشتراكات…</span>
                 </label>
                 <input className="input" type="number" placeholder="مثال: 200" value={monthlyObligations}
                   onChange={e => setMonthlyObligations(e.target.value)} min="0" step="0.5" />
@@ -226,12 +235,12 @@ export default function LoginPage() {
                 <div style={{ background: "var(--surface-2)", borderRadius: "12px", padding: "12px 14px", border: "1px solid var(--border)" }}>
                   <div style={{ fontSize: "0.78rem", fontWeight: 700, color: "var(--text-muted)", marginBottom: "8px" }}>📋 ملخص ميزانيتك</div>
                   <div style={{ display: "flex", flexDirection: "column", gap: "5px", fontSize: "0.82rem" }}>
-                    <Row label="الدخل الشهري" value={`${incomeNum.toFixed(3)} ر.ع`} color="var(--green)" />
-                    <Row label="الالتزامات" value={`− ${obligationsNum.toFixed(3)} ر.ع`} color="#ef4444" />
-                    <Row label="المتاح للإنفاق" value={`${disposable.toFixed(3)} ر.ع`} color="var(--primary)" bold />
+                    <Row label="الدخل الشهري" value={`${incomeNum.toFixed(currency==="OMR"||currency==="KWD"||currency==="BHD"||currency==="JOD"?3:2)} ${currSymbol}`} color="var(--green)" />
+                    <Row label="الالتزامات" value={`− ${obligationsNum.toFixed(currency==="OMR"||currency==="KWD"||currency==="BHD"||currency==="JOD"?3:2)} ${currSymbol}`} color="#ef4444" />
+                    <Row label="المتاح للإنفاق" value={`${disposable.toFixed(currency==="OMR"||currency==="KWD"||currency==="BHD"||currency==="JOD"?3:2)} ${currSymbol}`} color="var(--primary)" bold />
                     <div style={{ borderTop: "1px solid var(--border)", marginTop: "4px", paddingTop: "6px" }}>
-                      <Row label={`ادخار (${savingsPctNum}٪)`} value={`${savingsTarget.toFixed(3)} ر.ع`} color="var(--teal)" />
-                      <Row label="ميزانية الإنفاق اليومية" value={`${(spendingBudget / 30).toFixed(3)} ر.ع`} color="var(--text)" />
+                      <Row label={`ادخار (${savingsPctNum}٪)`} value={`${savingsTarget.toFixed(currency==="OMR"||currency==="KWD"||currency==="BHD"||currency==="JOD"?3:2)} ${currSymbol}`} color="var(--teal)" />
+                      <Row label="ميزانية الإنفاق اليومية" value={`${(spendingBudget / 30).toFixed(currency==="OMR"||currency==="KWD"||currency==="BHD"||currency==="JOD"?3:2)} ${currSymbol}`} color="var(--text)" />
                     </div>
                   </div>
                 </div>
