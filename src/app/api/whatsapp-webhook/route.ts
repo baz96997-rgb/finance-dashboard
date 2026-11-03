@@ -7,6 +7,7 @@ export const runtime = "edge";
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN!;
 const VERIFY_TOKEN    = process.env.WEBHOOK_VERIFY_TOKEN ?? "mizar-verify-2025";
+const ADMIN_PHONE     = "96896997977"; // رقم المدير
 const AMWAL_MERCHANT  = parseInt(process.env.AMWALPAY_MERCHANT_ID ?? "141336", 10);
 const AMWAL_TERMINAL  = parseInt(process.env.AMWALPAY_TERMINAL_ID ?? "679610", 10);
 const AMWAL_KEY       = process.env.AMWALPAY_SECURE_KEY ?? "5C1683D1EF9511A8CF13CA396F2CB6FA0461DD411AEAA2E994DCE333E0CF1549";
@@ -465,6 +466,88 @@ export async function POST(req: NextRequest) {
     const KV = (env as Record<string, KVNamespace>).EXPENSES_KV;
 
     const lower = text.toLowerCase().trim();
+
+    // ════════════════════════════════════════════════════════
+    // أوامر المدير (فقط من رقم المدير)
+    // ════════════════════════════════════════════════════════
+    if (from === ADMIN_PHONE) {
+      // منح بريميوم: "منح [رقم] [أيام]" — مثال: "منح 96896465000 30"
+      const grantMatch = lower.match(/^منح\s+(\d+)\s+(\d+)$/);
+      if (grantMatch) {
+        const targetPhone = grantMatch[1];
+        const days = parseInt(grantMatch[2]);
+        const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
+        const sub: Subscription = {
+          plan: "premium",
+          expiresAt,
+          activatedAt: new Date().toISOString(),
+          monthlyCount: 0,
+          lastResetMonth: new Date().toISOString().slice(0, 7),
+        };
+        await KV.put(`sub:${targetPhone}`, JSON.stringify(sub));
+        await sendWA(from, `✅ تم تفعيل البريميوم للرقم ${targetPhone} لمدة ${days} يوم حتى ${new Date(expiresAt).toLocaleDateString("ar-OM")}`);
+        // إشعار العميل
+        await sendWA(targetPhone, [
+          "🎉 *تهانينا! تم تفعيل اشتراكك المميز*",
+          "",
+          `⭐ خطة البريميوم مفعّلة لمدة *${days} يوم*`,
+          `📅 تنتهي: ${new Date(expiresAt).toLocaleDateString("ar-OM")}`,
+          "",
+          "✅ الآن يمكنك تسجيل مصاريف غير محدودة",
+          "✅ تقارير متقدمة وإحصائيات كاملة",
+          "✅ تنبيهات ذكية للميزانية",
+          "",
+          "ابدأ الآن — أرسل أي مصروف مثل: *50 بنزين* 🚀",
+          `🌐 داشبوردك: ${DASHBOARD_URL}?phone=${targetPhone}`,
+        ].join("\n"));
+        return NextResponse.json({ status: "ok" });
+      }
+
+      // إلغاء بريميوم: "الغ [رقم]"
+      const revokeMatch = lower.match(/^الغ\s+(\d+)$/);
+      if (revokeMatch) {
+        const targetPhone = revokeMatch[1];
+        const sub: Subscription = (await KV.get(`sub:${targetPhone}`, "json")) ?? {
+          plan: "free", expiresAt: null, activatedAt: null, monthlyCount: 0, lastResetMonth: "",
+        };
+        sub.plan = "free";
+        sub.expiresAt = null;
+        await KV.put(`sub:${targetPhone}`, JSON.stringify(sub));
+        await sendWA(from, `✅ تم إلغاء البريميوم للرقم ${targetPhone}`);
+        return NextResponse.json({ status: "ok" });
+      }
+
+      // حالة مستخدم: "حالة [رقم]"
+      const statusMatch = lower.match(/^حالة\s+(\d+)$/);
+      if (statusMatch) {
+        const targetPhone = statusMatch[1];
+        const sub = await getSubscription(KV, targetPhone);
+        const premium = isPremium(sub);
+        await sendWA(from, [
+          `📋 حالة الرقم: ${targetPhone}`,
+          `الخطة: ${premium ? "⭐ بريميوم" : "🆓 مجاني"}`,
+          premium ? `تنتهي: ${new Date(sub.expiresAt!).toLocaleDateString("ar-OM")}` : `المصاريف هذا الشهر: ${sub.monthlyCount}/${FREE_LIMIT}`,
+        ].join("\n"));
+        return NextResponse.json({ status: "ok" });
+      }
+
+      // قائمة أوامر المدير
+      if (lower === "admin") {
+        await sendWA(from, [
+          "🛠️ *أوامر المدير:*",
+          "",
+          "منح [رقم] [أيام] — تفعيل بريميوم",
+          "مثال: منح 96896465000 30",
+          "",
+          "الغ [رقم] — إلغاء البريميوم",
+          "مثال: الغ 96896465000",
+          "",
+          "حالة [رقم] — عرض حالة المستخدم",
+          "مثال: حالة 96896465000",
+        ].join("\n"));
+        return NextResponse.json({ status: "ok" });
+      }
+    }
 
     // ════════════════════════════════════════════════════════
     // أمر: مساعدة
