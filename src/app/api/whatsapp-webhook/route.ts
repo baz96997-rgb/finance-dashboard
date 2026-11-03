@@ -472,9 +472,9 @@ export async function POST(req: NextRequest) {
     // ════════════════════════════════════════════════════════
     if (from === ADMIN_PHONE) {
       // منح بريميوم: "منح [رقم] [أيام]" — مثال: "منح 96896465000 30"
-      const grantMatch = lower.match(/^منح\s+(\d+)\s+(\d+)$/);
+      const grantMatch = text.trim().match(/منح\s+([\d+]+)\s+(\d+)/);
       if (grantMatch) {
-        const targetPhone = grantMatch[1];
+        const targetPhone = grantMatch[1].replace(/\+/g, "");
         const days = parseInt(grantMatch[2]);
         const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
         const sub: Subscription = {
@@ -504,9 +504,9 @@ export async function POST(req: NextRequest) {
       }
 
       // إلغاء بريميوم: "الغ [رقم]"
-      const revokeMatch = lower.match(/^الغ\s+(\d+)$/);
+      const revokeMatch = text.trim().match(/الغ\s+([\d+]+)/);
       if (revokeMatch) {
-        const targetPhone = revokeMatch[1];
+        const targetPhone = revokeMatch[1].replace(/\+/g, "");
         const sub: Subscription = (await KV.get(`sub:${targetPhone}`, "json")) ?? {
           plan: "free", expiresAt: null, activatedAt: null, monthlyCount: 0, lastResetMonth: "",
         };
@@ -518,9 +518,9 @@ export async function POST(req: NextRequest) {
       }
 
       // حالة مستخدم: "حالة [رقم]"
-      const statusMatch = lower.match(/^حالة\s+(\d+)$/);
+      const statusMatch = text.trim().match(/حالة\s+([\d+]+)/);
       if (statusMatch) {
-        const targetPhone = statusMatch[1];
+        const targetPhone = statusMatch[1].replace(/\+/g, "");
         const sub = await getSubscription(KV, targetPhone);
         const premium = isPremium(sub);
         await sendWA(from, [
