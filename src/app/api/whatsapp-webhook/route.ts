@@ -451,7 +451,7 @@ export async function GET(req: NextRequest) {
 // ════════════════════════════════════════════════════════════
 export async function POST(req: NextRequest) {
   try {
-    const body     = await req.json();
+    const body     = await req.json() as Record<string, any>;
     const messages = body?.entry?.[0]?.changes?.[0]?.value?.messages;
     if (!messages?.length) return NextResponse.json({ status: "ok" });
 
