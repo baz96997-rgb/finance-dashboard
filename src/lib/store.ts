@@ -39,11 +39,22 @@ export function loadUser() {
   if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem("wallet_user");
-    return raw ? JSON.parse(raw) : null;
+    if (!raw) return null;
+    const u = JSON.parse(raw);
+    // ضمان وجود الحقول الجديدة للمستخدمين القدامى
+    return {
+      monthlyIncome: 0,
+      monthlyObligations: 0,
+      savingsGoalPct: 20,
+      setupDone: false,
+      currency: "OMR",
+      theme: "light",
+      ...u,
+    };
   } catch { return null; }
 }
 
-export function saveUser(user: { phone: string; name: string } | null) {
+export function saveUser(user: { phone: string; name: string; [key: string]: any } | null) {
   if (typeof window === "undefined") return;
   if (user) localStorage.setItem("wallet_user", JSON.stringify(user));
   else localStorage.removeItem("wallet_user");

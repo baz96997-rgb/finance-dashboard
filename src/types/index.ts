@@ -57,6 +57,11 @@ export interface User {
   name: string;
   currency: string;
   theme: "light" | "dark";
+  // معلومات مالية شخصية
+  monthlyIncome: number;       // الدخل الشهري بالريال العماني
+  monthlyObligations: number;  // الالتزامات الشهرية (إيجار، أقساط، ...)
+  savingsGoalPct: number;      // هدف الادخار كنسبة مئوية (0-100)
+  setupDone: boolean;          // هل أتم خطوة الإعداد الأولي؟
 }
 
 export interface AppState {
