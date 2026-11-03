@@ -15,6 +15,32 @@ const AMWAL_BASE      = "https://webhook.amwalpg.com";
 const DASHBOARD_URL   = "https://dashboard.baz96997.workers.dev";
 const APP_BASE_URL    = "https://finance-dashboard-ca6.pages.dev";
 
+// ─── خريطة البلد → العملة ────────────────────────────────────
+const COUNTRY_CURRENCY_MAP: Record<string, string> = {
+  "974": "QAR", "971": "AED", "966": "SAR", "965": "KWD",
+  "973": "BHD", "962": "JOD", "20": "EGP",
+  // 968 = OMR (الافتراضي)
+};
+
+// ─── إعدادات عرض العملات ─────────────────────────────────────
+const CURRENCY_CONFIG: Record<string, { symbol: string; decimals: number; subunit: string; rate: number }> = {
+  "OMR": { symbol: "ر.ع", decimals: 3, subunit: "بيسة", rate: 1 },
+  "KWD": { symbol: "د.ك", decimals: 3, subunit: "فلس",  rate: 1.22 },
+  "BHD": { symbol: "د.ب", decimals: 3, subunit: "فلس",  rate: 1.055 },
+  "JOD": { symbol: "د.أ", decimals: 3, subunit: "فلس",  rate: 0.706 },
+  "QAR": { symbol: "ر.ق", decimals: 2, subunit: "درهم", rate: 0.103 },
+  "SAR": { symbol: "ر.س", decimals: 2, subunit: "هللة", rate: 0.103 },
+  "AED": { symbol: "د.إ", decimals: 2, subunit: "فلس",  rate: 0.1026 },
+  "EGP": { symbol: "ج.م", decimals: 2, subunit: "قرش",  rate: 0.0203 },
+};
+
+function getCurrencyFromPhone(phone: string): string {
+  for (const [prefix, currency] of Object.entries(COUNTRY_CURRENCY_MAP)) {
+    if (phone.startsWith(prefix)) return currency;
+  }
+  return "OMR";
+}
+
 // ─── حد الخطة المجانية ──────────────────────────────────────
 const FREE_LIMIT = 30; // مصروف/شهر
 
@@ -190,8 +216,9 @@ const CURRENCIES: Record<string, { label: string; rate: number }> = {
 };
 
 // ─── استخراج المبلغ ──────────────────────────────────────────
-function extractAmount(text: string): { amount: number; currency: string; amountOMR: number } | null {
+function extractAmount(text: string, defaultCurrency = "OMR"): { amount: number; currency: string; amountOMR: number } | null {
   const t = convertDigits(text);
+  const defCfg = CURRENCY_CONFIG[defaultCurrency] ?? CURRENCY_CONFIG["OMR"];
   const numWords: Record<string, number> = {
     "نص": 0.5, "نصف": 0.5, "ربع": 0.25, "ثلاثة ارباع": 0.75,
     "واحد": 1, "اثنين": 2, "اثنان": 2, "ثلاثة": 3, "اربعة": 4, "خمسة": 5,
@@ -227,28 +254,36 @@ function extractAmount(text: string): { amount: number; currency: string; amount
         return { amount: val, currency: info.label, amountOMR: val * info.rate };
       }
     }
-    return { amount: val, currency: "ر.ع", amountOMR: val };
+    return { amount: val, currency: defCfg.symbol, amountOMR: val * defCfg.rate };
   }
 
   // رقم فقط
   const m2 = t.match(/(\d+(?:[.,]\d+)?)/);
   if (m2) {
     const amt = parseFloat(m2[1].replace(",", "."));
-    return { amount: amt, currency: "ر.ع", amountOMR: amt };
+    return { amount: amt, currency: defCfg.symbol, amountOMR: amt * defCfg.rate };
   }
 
   return null;
 }
 
-// ─── تنسيق المبلغ ────────────────────────────────────────────
-function formatOMR(v: number): string {
-  if (v < 1) return `${Math.round(v * 1000)} بيسة`;
-  return `${v.toFixed(3)} ر.ع`;
+// ─── تنسيق المبلغ (بالعملة المحلية للمستخدم) ────────────────
+function formatOMR(v: number, currency = "OMR"): string {
+  const cfg = CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG["OMR"];
+  // v يُفترض أنه بالريال العُماني — حوّله إلى عملة المستخدم
+  const displayV = currency === "OMR" ? v : v / cfg.rate;
+  if (cfg.decimals === 3) {
+    if (displayV < 1) return `${Math.round(displayV * 1000)} ${cfg.subunit}`;
+    return `${displayV.toFixed(3)} ${cfg.symbol}`;
+  } else {
+    if (displayV < 1) return `${Math.round(displayV * 100)} ${cfg.subunit}`;
+    return `${displayV.toFixed(2)} ${cfg.symbol}`;
+  }
 }
 
 // ─── تحليل المصروف ───────────────────────────────────────────
-function parseExpense(text: string): Expense | null {
-  const extracted = extractAmount(text);
+function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
+  const extracted = extractAmount(text, defaultCurrency);
   if (!extracted) return null;
   const { amount, currency, amountOMR } = extracted;
   if (amount <= 0 || amount > 100000) return null;
@@ -319,6 +354,7 @@ function buildPersonalAnalysis(
   expenses: Expense[],
   income: number,
   phone: string,
+  currency = "OMR",
 ): string {
   const now   = new Date();
   const month = expenses.filter(e => {
@@ -353,12 +389,12 @@ function buildPersonalAnalysis(
   lines.push("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄");
 
   if (hasIncome) {
-    lines.push(`💼 الدخل الشهري: *${formatOMR(income)}*`);
-    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent)}* (${spentPct.toFixed(0)}٪ من دخلك)`);
-    lines.push(`💰 المتبقي: *${formatOMR(remaining)}* — أي *${formatOMR(dailyLeft)}* يومياً لـ ${daysLeft} يوم`);
+    lines.push(`💼 الدخل الشهري: *${formatOMR(income, currency)}*`);
+    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent, currency)}* (${spentPct.toFixed(0)}٪ من دخلك)`);
+    lines.push(`💰 المتبقي: *${formatOMR(remaining, currency)}* — أي *${formatOMR(dailyLeft, currency)}* يومياً لـ ${daysLeft} يوم`);
   } else {
-    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent)}*`);
-    lines.push(`📅 متوسط يومي: *${formatOMR(avgDaily)}*`);
+    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent, currency)}*`);
+    lines.push(`📅 متوسط يومي: *${formatOMR(avgDaily, currency)}*`);
     lines.push(`⚡ لتحليل دقيق، أرسل: *راتبي [المبلغ]* مثال: راتبي 800`);
   }
 
@@ -374,7 +410,7 @@ function buildPersonalAnalysis(
     const ideal    = IDEAL[cat] ?? 10;
     const status   = !hasIncome ? "" : pct > ideal * 1.5 ? " 🔴 عالي" : pct > ideal ? " 🟡 فوق المثالي" : " 🟢";
     const pctStr   = hasIncome ? ` (${pct.toFixed(0)}٪)${status}` : "";
-    lines.push(`   ${icon} ${label}: ${formatOMR(amt)}${pctStr}`);
+    lines.push(`   ${icon} ${label}: ${formatOMR(amt, currency)}${pctStr}`);
   }
 
   if (!sorted.length) {
@@ -393,27 +429,29 @@ function buildPersonalAnalysis(
     const savingPct = ((income - totalSpent) / income) * 100;
 
     if ((foodAmt / income) * 100 > 20) {
-      lines.push(`   🍔 صرفت ${((foodAmt/income)*100).toFixed(0)}٪ من دخلك على الطعام — المثالي 15٪. توفير ${formatOMR(foodAmt - income*0.15)} ممكن بالطبخ في البيت 🍳`);
+      lines.push(`   🍔 صرفت ${((foodAmt/income)*100).toFixed(0)}٪ من دخلك على الطعام — المثالي 15٪. توفير ${formatOMR(foodAmt - income*0.15, currency)} ممكن بالطبخ في البيت 🍳`);
       adviceCount++;
     }
     if ((entAmt / income) * 100 > 10) {
-      lines.push(`   🎮 الترفيه أخذ ${((entAmt/income)*100).toFixed(0)}٪ — حدّد سقفاً لا يتجاوز 10٪ (${formatOMR(income*0.10)}) 🎯`);
+      lines.push(`   🎮 الترفيه أخذ ${((entAmt/income)*100).toFixed(0)}٪ — حدّد سقفاً لا يتجاوز 10٪ (${formatOMR(income*0.10, currency)}) 🎯`);
       adviceCount++;
     }
     if ((shopAmt / income) * 100 > 15) {
-      lines.push(`   🛍️ التسوق ${((shopAmt/income)*100).toFixed(0)}٪ من راتبك — انتظر 24 ساعة قبل أي شراء فوق ${formatOMR(20)} ⏰`);
+      const cfg = CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG["OMR"];
+      const threshold20 = 20 * cfg.rate; // 20 وحدة بالعملة المحلية → OMR
+      lines.push(`   🛍️ التسوق ${((shopAmt/income)*100).toFixed(0)}٪ من راتبك — انتظر 24 ساعة قبل أي شراء فوق ${formatOMR(threshold20, currency)} ⏰`);
       adviceCount++;
     }
     if (savingPct < 10 && totalSpent > 0) {
-      lines.push(`   💰 وفّرت ${savingPct.toFixed(0)}٪ فقط — الهدف 20٪ أي ${formatOMR(income*0.20)} شهرياً 🏆`);
+      lines.push(`   💰 وفّرت ${savingPct.toFixed(0)}٪ فقط — الهدف 20٪ أي ${formatOMR(income*0.20, currency)} شهرياً 🏆`);
       adviceCount++;
     }
     if (spentPct > 90) {
-      lines.push(`   🚨 صرفت ${spentPct.toFixed(0)}٪ من دخلك — بقي ${daysLeft} يوم و${formatOMR(remaining)} فقط! تحكّم في الإنفاق الآن`);
+      lines.push(`   🚨 صرفت ${spentPct.toFixed(0)}٪ من دخلك — بقي ${daysLeft} يوم و${formatOMR(remaining, currency)} فقط! تحكّم في الإنفاق الآن`);
       adviceCount++;
     }
     if (adviceCount === 0) {
-      lines.push(`   ✅ ممتاز! إنفاقك متوازن. استمر وفكّر في استثمار الـ ${formatOMR(remaining)} المتبقية 📈`);
+      lines.push(`   ✅ ممتاز! إنفاقك متوازن. استمر وفكّر في استثمار الـ ${formatOMR(remaining, currency)} المتبقية 📈`);
     }
   } else {
     lines.push("   أرسل *راتبي [المبلغ]* وأعطيك تحليلاً دقيقاً مقارناً بالمثاليات!");
@@ -656,11 +694,14 @@ export async function POST(req: NextRequest) {
     if (incomeMatch) {
       const incomeAmt = parseFloat(incomeMatch[1].replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(",", "."));
       if (!isNaN(incomeAmt) && incomeAmt > 0) {
-        const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
-        settings.monthlyIncome = incomeAmt;
+        const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
+        const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
+        const incomeCfg = CURRENCY_CONFIG[userCurrency] ?? CURRENCY_CONFIG["OMR"];
+        // نخزّن الدخل بالريال العُماني للمقارنة الموحّدة
+        settings.monthlyIncome = incomeAmt * incomeCfg.rate;
         await KV.put(`settings:${from}`, JSON.stringify(settings));
         await sendWA(from, [
-          `✅ *تم حفظ دخلك الشهري: ${formatOMR(incomeAmt)}*`,
+          `✅ *تم حفظ دخلك الشهري: ${formatOMR(settings.monthlyIncome, userCurrency)}*`,
           "",
           "الآن أقدر أعطيك تحليل مالي دقيق مبني على راتبك الفعلي! 📊",
           "أرسل *ملخص* لتشوف تحليلك الشخصي مع النسب والنصائح.",
@@ -676,10 +717,11 @@ export async function POST(req: NextRequest) {
     // ════════════════════════════════════════════════════════
     if (["ملخص", "رصيد", "summary"].includes(lower)) {
       const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
+      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
       const income = settings.monthlyIncome ?? 0;
+      const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
 
-      await sendWA(from, buildPersonalAnalysis(expenses, income, from));
+      await sendWA(from, buildPersonalAnalysis(expenses, income, from, userCurrency));
       return NextResponse.json({ status: "ok" });
     }
 
@@ -724,10 +766,13 @@ export async function POST(req: NextRequest) {
     const budgetMatch = text.match(/^ميزانية\s+(\d+(?:[.,]\d+)?)/);
     if (budgetMatch) {
       const budget = parseFloat(budgetMatch[1].replace(",", "."));
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR" };
-      settings.dailyBudget = budget;
+      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from) };
+      const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
+      const budgetCfg = CURRENCY_CONFIG[userCurrency] ?? CURRENCY_CONFIG["OMR"];
+      // نخزّن الميزانية بالريال العُماني
+      settings.dailyBudget = budget * budgetCfg.rate;
       await KV.put(`settings:${from}`, JSON.stringify(settings));
-      await sendWA(from, `✅ تم تعيين ميزانيتك اليومية على *${formatOMR(budget)}* 💰\n\nسأنبهك عند اقترابك من الحد!`);
+      await sendWA(from, `✅ تم تعيين ميزانيتك اليومية على *${formatOMR(settings.dailyBudget, userCurrency)}* 💰\n\nسأنبهك عند اقترابك من الحد!`);
       return NextResponse.json({ status: "ok" });
     }
 
@@ -852,7 +897,8 @@ export async function POST(req: NextRequest) {
 
     // ── 7. نصائح مالية ذكية (مخصصة بالدخل الحقيقي) ─────────
     // تحميل بيانات المستخدم لتشخيص النصائح
-    const adviceSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
+    const adviceSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
+    const adviceCurrency = adviceSettings.currency ?? getCurrencyFromPhone(from);
     const adviceExpenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
     const userIncome = adviceSettings.monthlyIncome ?? 0;
     const now2 = new Date();
@@ -863,11 +909,11 @@ export async function POST(req: NextRequest) {
     const totalSpentNow = monthExpenses.reduce((s, e) => s + e.amountOMR, 0);
     const hasIncome = userIncome > 0;
     // مساعدات حساب الأرقام الشخصية
-    const carMax = hasIncome ? formatOMR(userIncome * 0.15) : "120 ر.ع (مثال)";
-    const homeMax = hasIncome ? formatOMR(userIncome * 0.28) : "280 ر.ع (مثال)";
-    const saveTarget = hasIncome ? formatOMR(userIncome * 0.20) : "160 ر.ع (مثال)";
-    const emergency3m = hasIncome ? formatOMR(totalSpentNow > 0 ? totalSpentNow * 3 : userIncome * 0.8 * 3) : "2,000-3,000 ر.ع (مثال)";
-    const incomeLabel = hasIncome ? `راتبك ${formatOMR(userIncome)}` : "راتبك";
+    const carMax = hasIncome ? formatOMR(userIncome * 0.15, adviceCurrency) : "120 (مثال)";
+    const homeMax = hasIncome ? formatOMR(userIncome * 0.28, adviceCurrency) : "280 (مثال)";
+    const saveTarget = hasIncome ? formatOMR(userIncome * 0.20, adviceCurrency) : "160 (مثال)";
+    const emergency3m = hasIncome ? formatOMR(totalSpentNow > 0 ? totalSpentNow * 3 : userIncome * 0.8 * 3, adviceCurrency) : "2,000-3,000 (مثال)";
+    const incomeLabel = hasIncome ? `راتبك ${formatOMR(userIncome, adviceCurrency)}` : "راتبك";
     const incomeHint = !hasIncome ? "\n\n💡 *نصيحة:* أرسل *راتبي [المبلغ]* وأعطيك أرقامك الشخصية بدقة!" : "";
 
     // شراء سيارة
@@ -950,8 +996,8 @@ export async function POST(req: NextRequest) {
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         "",
         "📐 *قاعدة 50/30/20 الذهبية:*",
-        hasIncome ? `   50٪ = ${formatOMR(userIncome*0.50)} → ضروريات (إيجار، طعام، فواتير)` : "   50٪ من الراتب → ضروريات",
-        hasIncome ? `   30٪ = ${formatOMR(userIncome*0.30)} → رغبات (ترفيه، تسوق، مطاعم)` : "   30٪ من الراتب → رغبات",
+        hasIncome ? `   50٪ = ${formatOMR(userIncome*0.50, adviceCurrency)} → ضروريات (إيجار، طعام، فواتير)` : "   50٪ من الراتب → ضروريات",
+        hasIncome ? `   30٪ = ${formatOMR(userIncome*0.30, adviceCurrency)} → رغبات (ترفيه، تسوق، مطاعم)` : "   30٪ من الراتب → رغبات",
         hasIncome ? `   20٪ = *${saveTarget}* → *توفير وادخار* 🏆` : "   20٪ من الراتب → *توفير وادخار* 🏆",
         "",
         "📌 *السر الأول — وفّر قبل ما تصرف!*",
@@ -1056,16 +1102,16 @@ export async function POST(req: NextRequest) {
     // إدارة الراتب
     if (["ادارة راتب","كيف أدير","كيف ادير","خطة مالية","خطه ماليه","تخطيط مالي","راتب ضعيف","ما يكفي الراتب","الراتب ما يكفي","نهاية الشهر"].some(q => lower.includes(q))) {
       const salaryLines = hasIncome ? [
-        `📐 *توزيع راتبك ${formatOMR(userIncome)} المثالي:*`,
+        `📐 *توزيع راتبك ${formatOMR(userIncome, adviceCurrency)} المثالي:*`,
         "",
-        `🏠 *الضروريات (50٪) = ${formatOMR(userIncome*0.50)}:*`,
+        `🏠 *الضروريات (50٪) = ${formatOMR(userIncome*0.50, adviceCurrency)}:*`,
         `   إيجار + طعام + فواتير + مواصلات`,
-        `   (أنت صرفت هذا الشهر: ${formatOMR(totalSpentNow)})`,
+        `   (أنت صرفت هذا الشهر: ${formatOMR(totalSpentNow, adviceCurrency)})`,
         "",
-        `🎮 *الرغبات (30٪) = ${formatOMR(userIncome*0.30)}:*`,
+        `🎮 *الرغبات (30٪) = ${formatOMR(userIncome*0.30, adviceCurrency)}:*`,
         `   مطاعم، ترفيه، تسوق، اشتراكات`,
         "",
-        `💰 *التوفير (20٪) = ${formatOMR(userIncome*0.20)}:*`,
+        `💰 *التوفير (20٪) = ${formatOMR(userIncome*0.20, adviceCurrency)}:*`,
         `   صندوق طوارئ أولاً (هدف: ${emergency3m})`,
         `   ثم سداد ديون، ثم استثمار`,
       ] : [
@@ -1093,7 +1139,7 @@ export async function POST(req: NextRequest) {
         "",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         hasIncome
-          ? `✅ لديك دخل محفوظ ${formatOMR(userIncome)} — أرسل *ملخص* للتحليل الكامل 📊`
+          ? `✅ لديك دخل محفوظ ${formatOMR(userIncome, adviceCurrency)} — أرسل *ملخص* للتحليل الكامل 📊`
           : "🚀 ابدأ الآن بإرسال *راتبي [مبلغ]* ثم *ملخص* لتحليل مالي دقيق!",
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
@@ -1136,7 +1182,9 @@ export async function POST(req: NextRequest) {
     // ════════════════════════════════════════════════════════
     // تسجيل مصروف
     // ════════════════════════════════════════════════════════
-    const expense = parseExpense(text);
+    const expenseSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from) };
+    const expenseCurrency = expenseSettings.currency ?? getCurrencyFromPhone(from);
+    const expense = parseExpense(text, expenseCurrency);
     if (expense) {
       // فحص حد الخطة المجانية
       const sub = await getSubscription(KV, from);
@@ -1178,15 +1226,14 @@ export async function POST(req: NextRequest) {
       const level = getLevel(profile.totalExpenses);
       const streakText = profile.streak > 1 ? `🔥 سلسلة الأيام: ${profile.streak} أيام 🔥` : "يوم جديد، بداية جديدة! 🌟";
 
-      // فحص الميزانية اليومية
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR" };
+      // فحص الميزانية اليومية (نستخدم expenseSettings المُحمَّلة مسبقاً)
       let budgetWarning = "";
-      if (settings.dailyBudget > 0) {
+      if (expenseSettings.dailyBudget > 0) {
         const today = new Date().toISOString().slice(0, 10);
         const todayExpenses = expenses.filter(e => e.date.startsWith(today));
         const todayTotal = todayExpenses.reduce((s, e) => s + e.amountOMR, 0);
-        const ratio = todayTotal / settings.dailyBudget;
-        if (ratio >= 1)       budgetWarning = `\n🚨 *تنبيه:* تجاوزت ميزانيتك اليومية! (${formatOMR(todayTotal)} من ${formatOMR(settings.dailyBudget)})`;
+        const ratio = todayTotal / expenseSettings.dailyBudget;
+        if (ratio >= 1)       budgetWarning = `\n🚨 *تنبيه:* تجاوزت ميزانيتك اليومية! (${formatOMR(todayTotal, expenseCurrency)} من ${formatOMR(expenseSettings.dailyBudget, expenseCurrency)})`;
         else if (ratio >= 0.8) budgetWarning = `\n⚠️ *تنبيه:* اقتربت من ميزانيتك اليومية (${Math.round(ratio * 100)}%)`;
       }
 
@@ -1202,8 +1249,8 @@ export async function POST(req: NextRequest) {
         `💵 طريقة الدفع: ${expense.paymentMethod}`,
         `📝 الوصف: ${expense.description}`,
         `🔢 تقسيط: ${expense.installments}/${expense.totalInstallments}`,
-        `💲 كل قسط: ${formatOMR(perInstallment)}`,
-        `🧾 الإجمالي: ${formatOMR(expense.amountOMR)}`,
+        `💲 كل قسط: ${formatOMR(perInstallment, expenseCurrency)}`,
+        `🧾 الإجمالي: ${formatOMR(expense.amountOMR, expenseCurrency)}`,
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         `💡 نصيحة: ${tip}`,
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
