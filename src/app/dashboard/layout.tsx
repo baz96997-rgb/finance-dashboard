@@ -58,14 +58,32 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           display: "none",
           alignItems: "center",
           justifyContent: "space-between",
-          padding: "12px 16px",
+          padding: "10px 16px",
           background: "var(--surface)",
           borderBottom: "1px solid var(--border)",
           position: "sticky", top: 0, zIndex: 30,
         }} className="mobile-topbar">
-          <button className="btn btn-ghost" style={{ padding: "6px" }} onClick={() => setMobileOpen(true)}>☰</button>
-          <div style={{ fontWeight: 800, color: "var(--primary)" }}>💎</div>
-          <div style={{ width: 32 }} />
+          {/* زر القائمة — مكبّر وواضح */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            style={{
+              width: "44px", height: "44px",
+              borderRadius: "12px",
+              background: "var(--surface-2)",
+              border: "1.5px solid var(--border)",
+              cursor: "pointer",
+              display: "flex", flexDirection: "column",
+              alignItems: "center", justifyContent: "center",
+              gap: "5px", padding: 0,
+            }}
+          >
+            <span style={{ display: "block", width: "22px", height: "2.5px", background: "var(--text)", borderRadius: "2px" }} />
+            <span style={{ display: "block", width: "16px", height: "2.5px", background: "var(--text)", borderRadius: "2px", alignSelf: "flex-start", marginRight: "2px", marginLeft: "11px" }} />
+            <span style={{ display: "block", width: "22px", height: "2.5px", background: "var(--text)", borderRadius: "2px" }} />
+          </button>
+
+          <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "var(--primary)" }}>💎 Mizar</div>
+          <div style={{ width: "44px" }} />
         </header>
 
         <main style={{ flex: 1, padding: "1.5rem", maxWidth: "1200px", width: "100%", margin: "0 auto" }}>
