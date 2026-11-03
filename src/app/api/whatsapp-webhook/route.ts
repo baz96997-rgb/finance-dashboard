@@ -50,7 +50,7 @@ interface Expense {
 interface UserSettings {
   dailyBudget: number;
   currency: string;
-  monthlyIncome: number; // الراتب / الدخل الشهري بالـ OMR
+  monthlyIncome?: number; // الراتب / الدخل الشهري بالـ OMR (اختياري)
 }
 
 interface UserProfile {
