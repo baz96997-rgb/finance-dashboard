@@ -50,6 +50,7 @@ interface Expense {
 interface UserSettings {
   dailyBudget: number;
   currency: string;
+  monthlyIncome: number; // الراتب / الدخل الشهري بالـ OMR
 }
 
 interface UserProfile {
@@ -312,6 +313,117 @@ function updateStreak(profile: UserProfile): UserProfile {
   return profile;
 }
 
+// ─── تحليل مالي شخصي مبني على بيانات حقيقية ─────────────────
+function buildPersonalAnalysis(
+  expenses: Expense[],
+  income: number,
+  phone: string,
+): string {
+  const now   = new Date();
+  const month = expenses.filter(e => {
+    const d = new Date(e.date);
+    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+  });
+
+  const totalSpent = month.reduce((s, e) => s + e.amountOMR, 0);
+
+  // تجميع حسب الفئة
+  const byCategory: Record<string, number> = {};
+  month.forEach(e => {
+    byCategory[e.category] = (byCategory[e.category] ?? 0) + e.amountOMR;
+  });
+
+  const hasIncome = income > 0;
+  const spentPct  = hasIncome ? (totalSpent / income) * 100 : 0;
+  const remaining = hasIncome ? income - totalSpent : 0;
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const daysLeft    = daysInMonth - now.getDate();
+  const dailyLeft   = daysLeft > 0 ? remaining / daysLeft : 0;
+  const avgDaily    = now.getDate() > 0 ? totalSpent / now.getDate() : 0;
+
+  // المثاليات
+  const IDEAL: Record<string, number> = {
+    food: 15, transport: 10, utilities: 10,
+    health: 5, entertainment: 5, shopping: 10, education: 5, savings: 20,
+  };
+
+  const lines: string[] = [];
+  lines.push(`📊 *تحليلك المالي لـ ${now.toLocaleDateString("ar-OM", { month: "long" })}*`);
+  lines.push("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄");
+
+  if (hasIncome) {
+    lines.push(`💼 الدخل الشهري: *${formatOMR(income)}*`);
+    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent)}* (${spentPct.toFixed(0)}٪ من دخلك)`);
+    lines.push(`💰 المتبقي: *${formatOMR(remaining)}* — أي *${formatOMR(dailyLeft)}* يومياً لـ ${daysLeft} يوم`);
+  } else {
+    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent)}*`);
+    lines.push(`📅 متوسط يومي: *${formatOMR(avgDaily)}*`);
+    lines.push(`⚡ لتحليل دقيق، أرسل: *راتبي [المبلغ]* مثال: راتبي 800`);
+  }
+
+  lines.push("");
+  lines.push("📂 *توزيع مصاريفك:*");
+
+  const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+  for (const [cat, amt] of sorted) {
+    const catInfo  = CATEGORIES[cat];
+    const label    = catInfo?.label ?? cat;
+    const icon     = catInfo?.icon  ?? "📦";
+    const pct      = hasIncome ? (amt / income) * 100 : 0;
+    const ideal    = IDEAL[cat] ?? 10;
+    const status   = !hasIncome ? "" : pct > ideal * 1.5 ? " 🔴 عالي" : pct > ideal ? " 🟡 فوق المثالي" : " 🟢";
+    const pctStr   = hasIncome ? ` (${pct.toFixed(0)}٪)${status}` : "";
+    lines.push(`   ${icon} ${label}: ${formatOMR(amt)}${pctStr}`);
+  }
+
+  if (!sorted.length) {
+    lines.push("   لا توجد مصاريف مسجلة هذا الشهر بعد");
+  }
+
+  // نصائح مخصصة
+  lines.push("");
+  lines.push("💡 *نصائح بناءً على أرقامك:*");
+
+  let adviceCount = 0;
+  if (hasIncome) {
+    const foodAmt   = byCategory["food"]          ?? 0;
+    const entAmt    = byCategory["entertainment"]  ?? 0;
+    const shopAmt   = byCategory["shopping"]       ?? 0;
+    const savingPct = ((income - totalSpent) / income) * 100;
+
+    if ((foodAmt / income) * 100 > 20) {
+      lines.push(`   🍔 صرفت ${((foodAmt/income)*100).toFixed(0)}٪ من دخلك على الطعام — المثالي 15٪. توفير ${formatOMR(foodAmt - income*0.15)} ممكن بالطبخ في البيت 🍳`);
+      adviceCount++;
+    }
+    if ((entAmt / income) * 100 > 10) {
+      lines.push(`   🎮 الترفيه أخذ ${((entAmt/income)*100).toFixed(0)}٪ — حدّد سقفاً لا يتجاوز 10٪ (${formatOMR(income*0.10)}) 🎯`);
+      adviceCount++;
+    }
+    if ((shopAmt / income) * 100 > 15) {
+      lines.push(`   🛍️ التسوق ${((shopAmt/income)*100).toFixed(0)}٪ من راتبك — انتظر 24 ساعة قبل أي شراء فوق ${formatOMR(20)} ⏰`);
+      adviceCount++;
+    }
+    if (savingPct < 10 && totalSpent > 0) {
+      lines.push(`   💰 وفّرت ${savingPct.toFixed(0)}٪ فقط — الهدف 20٪ أي ${formatOMR(income*0.20)} شهرياً 🏆`);
+      adviceCount++;
+    }
+    if (spentPct > 90) {
+      lines.push(`   🚨 صرفت ${spentPct.toFixed(0)}٪ من دخلك — بقي ${daysLeft} يوم و${formatOMR(remaining)} فقط! تحكّم في الإنفاق الآن`);
+      adviceCount++;
+    }
+    if (adviceCount === 0) {
+      lines.push(`   ✅ ممتاز! إنفاقك متوازن. استمر وفكّر في استثمار الـ ${formatOMR(remaining)} المتبقية 📈`);
+    }
+  } else {
+    lines.push("   أرسل *راتبي [المبلغ]* وأعطيك تحليلاً دقيقاً مقارناً بالمثاليات!");
+  }
+
+  lines.push("");
+  lines.push("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄");
+  lines.push(`🌐 ${DASHBOARD_URL}?phone=${phone}`);
+  return lines.join("\n");
+}
+
 // ─── إرسال واتساب ────────────────────────────────────────────
 async function sendWA(to: string, body: string) {
   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
@@ -368,7 +480,8 @@ export async function POST(req: NextRequest) {
         "  مثال: 100 ريال اكل مطعم",
         "  مثال: 500 بيسة قهوة",
         "",
-        "📊 *ملخص* — ملخص المصاريف الشهرية",
+        "📊 *ملخص* — تحليل مالي شخصي مبني على أرقامك",
+        "💼 *راتبي 800* — حفظ دخلك الشهري لتحليل دقيق",
         "📋 *قائمة* — آخر 5 مصاريف",
         "🗑️ *حذف* — حذف آخر مصروف",
         "💰 *ميزانية 50* — تعيين ميزانية يومية",
@@ -454,42 +567,36 @@ export async function POST(req: NextRequest) {
     }
 
     // ════════════════════════════════════════════════════════
-    // أمر: ملخص
+    // أمر: راتبي {مبلغ} — حفظ الدخل الشهري
+    // ════════════════════════════════════════════════════════
+    const incomeMatch = lower.match(/^راتبي\s+([\d٠-٩]+(?:[.,][\d٠-٩]+)?)/);
+    if (incomeMatch) {
+      const incomeAmt = parseFloat(incomeMatch[1].replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(",", "."));
+      if (!isNaN(incomeAmt) && incomeAmt > 0) {
+        const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
+        settings.monthlyIncome = incomeAmt;
+        await KV.put(`settings:${from}`, JSON.stringify(settings));
+        await sendWA(from, [
+          `✅ *تم حفظ دخلك الشهري: ${formatOMR(incomeAmt)}*`,
+          "",
+          "الآن أقدر أعطيك تحليل مالي دقيق مبني على راتبك الفعلي! 📊",
+          "أرسل *ملخص* لتشوف تحليلك الشخصي مع النسب والنصائح.",
+        ].join("\n"));
+      } else {
+        await sendWA(from, "❌ المبلغ غير صحيح. مثال: *راتبي 800*");
+      }
+      return NextResponse.json({ status: "ok" });
+    }
+
+    // ════════════════════════════════════════════════════════
+    // أمر: ملخص — تحليل مالي شخصي مبني على البيانات الحقيقية
     // ════════════════════════════════════════════════════════
     if (["ملخص", "رصيد", "summary"].includes(lower)) {
       const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
-      const now = new Date();
-      const thisMonth = expenses.filter(e => {
-        const d = new Date(e.date);
-        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-      });
-      const total = thisMonth.reduce((s, e) => s + e.amountOMR, 0);
-      const byCategory: Record<string, number> = {};
-      thisMonth.forEach(e => {
-        const key = `${e.categoryIcon} ${e.categoryLabel}`;
-        byCategory[key] = (byCategory[key] ?? 0) + e.amountOMR;
-      });
-      const lines = Object.entries(byCategory)
-        .sort((a, b) => b[1] - a[1])
-        .map(([cat, amt]) => `   ${cat}: ${formatOMR(amt)}`);
+      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
+      const income = settings.monthlyIncome ?? 0;
 
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR" };
-      const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-      const avgDaily = total / now.getDate();
-
-      await sendWA(from, [
-        `📊 *ملخص ${now.toLocaleDateString("ar-OM", { month: "long", year: "numeric" })}*`,
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `💸 الإجمالي: *${formatOMR(total)}*`,
-        `🧾 عدد المعاملات: ${thisMonth.length}`,
-        `📈 متوسط يومي: ${formatOMR(avgDaily)}`,
-        settings.dailyBudget > 0 ? `💰 الميزانية اليومية: ${formatOMR(settings.dailyBudget)}` : "",
-        "",
-        "📂 *حسب الفئة:*",
-        ...lines,
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `🌐 ${DASHBOARD_URL}?phone=${from}`,
-      ].filter(Boolean).join("\n"));
+      await sendWA(from, buildPersonalAnalysis(expenses, income, from));
       return NextResponse.json({ status: "ok" });
     }
 
@@ -660,7 +767,25 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ status: "ok" });
     }
 
-    // ── 7. نصائح مالية ذكية ──────────────────────────────────
+    // ── 7. نصائح مالية ذكية (مخصصة بالدخل الحقيقي) ─────────
+    // تحميل بيانات المستخدم لتشخيص النصائح
+    const adviceSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: "OMR", monthlyIncome: 0 };
+    const adviceExpenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
+    const userIncome = adviceSettings.monthlyIncome ?? 0;
+    const now2 = new Date();
+    const monthExpenses = adviceExpenses.filter(e => {
+      const d = new Date(e.date);
+      return d.getMonth() === now2.getMonth() && d.getFullYear() === now2.getFullYear();
+    });
+    const totalSpentNow = monthExpenses.reduce((s, e) => s + e.amountOMR, 0);
+    const hasIncome = userIncome > 0;
+    // مساعدات حساب الأرقام الشخصية
+    const carMax = hasIncome ? formatOMR(userIncome * 0.15) : "120 ر.ع (مثال)";
+    const homeMax = hasIncome ? formatOMR(userIncome * 0.28) : "280 ر.ع (مثال)";
+    const saveTarget = hasIncome ? formatOMR(userIncome * 0.20) : "160 ر.ع (مثال)";
+    const emergency3m = hasIncome ? formatOMR(totalSpentNow > 0 ? totalSpentNow * 3 : userIncome * 0.8 * 3) : "2,000-3,000 ر.ع (مثال)";
+    const incomeLabel = hasIncome ? `راتبك ${formatOMR(userIncome)}` : "راتبك";
+    const incomeHint = !hasIncome ? "\n\n💡 *نصيحة:* أرسل *راتبي [المبلغ]* وأعطيك أرقامك الشخصية بدقة!" : "";
 
     // شراء سيارة
     if (["سيارة","سياره","اشتري سيارة","سيارة جديدة","سيارة مستعملة","كيف اشتري سيارة","ابي سيارة","بدي سيارة","اريد سيارة"].some(q => lower.includes(q))) {
@@ -668,12 +793,9 @@ export async function POST(req: NextRequest) {
         "🚗 *خطة شراء السيارة الذكية*",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         "",
-        "قبل ما تشتري، خذ هذه الخطوات معك:",
-        "",
         "📌 *الخطوة 1 — حدد ميزانيتك*",
-        "   قاعدة الخبراء: قسط السيارة لا يتجاوز",
-        "   *15٪ من دخلك الشهري* 💡",
-        "   مثال: راتب 800 ر.ع → قسط أقصاه 120 ر.ع",
+        `   قاعدة الخبراء: قسط السيارة لا يتجاوز 15٪ من دخلك`,
+        `   بناءً على ${incomeLabel} → *قسط أقصاه ${carMax}* 💡`,
         "",
         "📌 *الخطوة 2 — دفعة أولى*",
         "   حاول تدفع *20٪ على الأقل* من السعر نقداً",
@@ -696,8 +818,7 @@ export async function POST(req: NextRequest) {
         "   مستعملة (2-3 سنوات) = نفس الجودة بسعر أقل 💰",
         "",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "💙 سجّل مصاريفك الشهرية وأساعدك تعرف كم تقدر تخصص للقسط!",
-        "أرسل *ملخص* لتشوف وضعك المالي الآن 📊",
+        `💙 أرسل *ملخص* لتشوف وضعك المالي الكامل الآن 📊${incomeHint}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
@@ -714,8 +835,8 @@ export async function POST(req: NextRequest) {
         "   ابدأ صندوق توفير مخصص للبيت الآن 🏦",
         "",
         "📌 *الخطوة 2 — قاعدة الـ 28٪*",
-        "   قسط البيت لا يتجاوز *28٪ من راتبك*",
-        "   راتب 1,000 ر.ع → قسط أقصاه 280 ر.ع",
+        `   قسط البيت لا يتجاوز *28٪ من راتبك*`,
+        `   بناءً على ${incomeLabel} → *قسط أقصاه ${homeMax}* 💡`,
         "",
         "📌 *الخطوة 3 — تكاليف ما بعد الشراء* ⚠️",
         "   • صيانة سنوية: ~1٪ من قيمة البيت",
@@ -729,14 +850,12 @@ export async function POST(req: NextRequest) {
         "   فرق 0.5٪ = آلاف الريالات على 20 سنة",
         "",
         "📌 *الخطوة 5 — خطة التوفير*",
-        "   🎯 حدد المبلغ المطلوب",
+        "   🎯 حدد المبلغ المطلوب للدفعة الأولى",
         "   📅 قسّمه على عدد الأشهر",
-        "   💰 وفّر هذا المبلغ تلقائياً أول الشهر",
+        `   💰 وفّر *${saveTarget}* شهرياً تلقائياً أول الشهر`,
         "",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "💡 *نصيحة ذهبية:* رتّب ديونك وحسّن سجلك الائتماني قبل التقديم — يرفع فرصك ويخفض الفائدة!",
-        "",
-        "أرسل *ملخص* وأعطيك صورة واضحة عن مصاريفك الحالية 📊",
+        `💡 *نصيحة ذهبية:* رتّب ديونك وحسّن سجلك الائتماني قبل التقديم!${incomeHint}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
@@ -748,17 +867,17 @@ export async function POST(req: NextRequest) {
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         "",
         "📐 *قاعدة 50/30/20 الذهبية:*",
-        "   50٪ من الراتب → ضروريات (إيجار، طعام، فواتير)",
-        "   30٪ من الراتب → رغبات (ترفيه، تسوق، مطاعم)",
-        "   20٪ من الراتب → *توفير وادخار* 🏆",
+        hasIncome ? `   50٪ = ${formatOMR(userIncome*0.50)} → ضروريات (إيجار، طعام، فواتير)` : "   50٪ من الراتب → ضروريات",
+        hasIncome ? `   30٪ = ${formatOMR(userIncome*0.30)} → رغبات (ترفيه، تسوق، مطاعم)` : "   30٪ من الراتب → رغبات",
+        hasIncome ? `   20٪ = *${saveTarget}* → *توفير وادخار* 🏆` : "   20٪ من الراتب → *توفير وادخار* 🏆",
         "",
         "📌 *السر الأول — وفّر قبل ما تصرف!*",
-        "   أول ما يدخل الراتب، حوّل 20٪ لحساب توفير",
+        `   أول ما يدخل الراتب، حوّل *${saveTarget}* لحساب توفير`,
         "   لا تنتظر آخر الشهر — ما يبقى شيء! 😅",
         "",
         "📌 *السر الثاني — صندوق الطوارئ أولاً*",
-        "   وفّر ما يغطي *3-6 أشهر* من مصاريفك",
-        "   هذا درعك ضد المفاجآت 🛡️",
+        `   هدفك: *${emergency3m}* (3 أشهر من مصاريفك) 🛡️`,
+        "   هذا درعك ضد المفاجآت",
         "",
         "📌 *السر الثالث — قاعدة 24 ساعة* ⏰",
         "   أي شراء فوق 50 ر.ع — انتظر يوم كامل",
@@ -768,12 +887,8 @@ export async function POST(req: NextRequest) {
         "   اعمل تحويل تلقائي لحساب التوفير",
         "   لما ما تشوف الفلوس، ما تصرفها 💡",
         "",
-        "📌 *السر الخامس — تحدي 30 يوم*",
-        "   كل مصروف غير ضروري، ضعه في التوفير",
-        "   سجّل مصاريفك هنا وشوف أين تضيع فلوسك 👇",
-        "",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "🚀 الخطوة الأولى: أرسل *ملخص* لأعطيك تقرير مصاريفك الآن!",
+        `🚀 أرسل *ملخص* لتشوف أين تذهب فلوسك الآن!${incomeHint}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
@@ -856,39 +971,47 @@ export async function POST(req: NextRequest) {
     }
 
     // إدارة الراتب
-    if (["راتبي","ادارة راتب","كيف أدير","كيف ادير","خطة مالية","خطه ماليه","تخطيط مالي","راتب ضعيف","ما يكفي الراتب","الراتب ما يكفي","نهاية الشهر"].some(q => lower.includes(q))) {
+    if (["ادارة راتب","كيف أدير","كيف ادير","خطة مالية","خطه ماليه","تخطيط مالي","راتب ضعيف","ما يكفي الراتب","الراتب ما يكفي","نهاية الشهر"].some(q => lower.includes(q))) {
+      const salaryLines = hasIncome ? [
+        `📐 *توزيع راتبك ${formatOMR(userIncome)} المثالي:*`,
+        "",
+        `🏠 *الضروريات (50٪) = ${formatOMR(userIncome*0.50)}:*`,
+        `   إيجار + طعام + فواتير + مواصلات`,
+        `   (أنت صرفت هذا الشهر: ${formatOMR(totalSpentNow)})`,
+        "",
+        `🎮 *الرغبات (30٪) = ${formatOMR(userIncome*0.30)}:*`,
+        `   مطاعم، ترفيه، تسوق، اشتراكات`,
+        "",
+        `💰 *التوفير (20٪) = ${formatOMR(userIncome*0.20)}:*`,
+        `   صندوق طوارئ أولاً (هدف: ${emergency3m})`,
+        `   ثم سداد ديون، ثم استثمار`,
+      ] : [
+        "📐 *التوزيع المثالي للراتب:*",
+        "",
+        "🏠 *الضروريات (50٪):* إيجار + طعام + فواتير + مواصلات",
+        "🎮 *الرغبات (30٪):* مطاعم، ترفيه، تسوق، اشتراكات",
+        "💰 *التوفير (20٪):* صندوق طوارئ → ديون → استثمار",
+        "",
+        "💡 *أرسل راتبي [المبلغ] وأعطيك أرقامك الدقيقة!*",
+      ];
+
       await sendWA(from, [
         "📋 *خطتك المالية الشخصية*",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
         "",
         "دعني أساعدك تقسّم راتبك بذكاء 🧠",
         "",
-        "📐 *التوزيع المثالي للراتب:*",
-        "",
-        "🏠 *الضروريات (50٪):*",
-        "   إيجار / قسط بيت",
-        "   طعام وبقالة",
-        "   فواتير وانترنت",
-        "   مواصلات",
-        "",
-        "🎮 *الرغبات (30٪):*",
-        "   مطاعم وكافيهات",
-        "   ترفيه وتسوق",
-        "   اشتراكات",
-        "",
-        "💰 *التوفير والمستقبل (20٪):*",
-        "   صندوق طوارئ أولاً",
-        "   ثم سداد ديون",
-        "   ثم استثمار",
+        ...salaryLines,
         "",
         "📌 *3 خطوات لتبدأ الآن:*",
-        "   1️⃣ سجّل مصاريفك هنا لأسبوع كامل",
-        "   2️⃣ أنا أعطيك تقرير وين تذهب فلوسك",
+        "   1️⃣ أرسل *ملخص* وأعطيك تقرير مصاريفك الكامل",
+        "   2️⃣ أنا أعطيك تحليل أين تذهب فلوسك",
         "   3️⃣ معاً نحدد أين تقدر توفر أكثر 💪",
         "",
         "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "🚀 ابدأ الآن! سجّل أي مصروف: مثال *50 بنزين*",
-        "وبعد أسبوع أعطيك تحليل كامل لعاداتك المالية 📊",
+        hasIncome
+          ? `✅ لديك دخل محفوظ ${formatOMR(userIncome)} — أرسل *ملخص* للتحليل الكامل 📊`
+          : "🚀 ابدأ الآن بإرسال *راتبي [مبلغ]* ثم *ملخص* لتحليل مالي دقيق!",
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
