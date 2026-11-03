@@ -82,7 +82,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <span style={{ display: "block", width: "22px", height: "2.5px", background: "var(--text)", borderRadius: "2px" }} />
           </button>
 
-          <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "var(--primary)" }}>💎 Mizar</div>
+          <div style={{ fontWeight: 800, fontSize: "1.1rem", color: "var(--primary)" }}>💎 المحفظة الذكية</div>
           <div style={{ width: "44px" }} />
         </header>
 
