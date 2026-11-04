@@ -641,49 +641,33 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ok" });
       }
 
-      // عرض خيارات الاشتراك مع روابط دفع مباشرة
-      await sendWA(from, String.fromCodePoint(0x23F3) + " جاري تجهيز روابط الدفع...");
-      const [monthly, yearly] = await Promise.all([
-        initAmwalPayment(from, "monthly"),
-        initAmwalPayment(from, "yearly"),
-      ]);
+      // إرسال رابط صفحة الأسعار
       const gem   = String.fromCodePoint(0x1F48E); // 💎
-      const starF = String.fromCodePoint(0x1F31F); // 🌟
-      const chk   = String.fromCodePoint(0x2705);  // ✅
-      const lnk   = String.fromCodePoint(0x1F517); // 🔗
+      const link  = String.fromCodePoint(0x1F517); // 🔗
       const cal1  = String.fromCodePoint(0x1F4C5); // 📅
       const cal2  = String.fromCodePoint(0x1F4C6); // 📆
       const party = String.fromCodePoint(0x1F389); // 🎉
-      const msgLines = [
+      const pricingUrl = `${APP_BASE_URL}/pricing?phone=${from}`;
+      await sendWA(from, [
         gem + " *ترقية إلى البريميوم*",
         "",
         "*خطتك الحالية:*",
         `   ${remainingFree(sub)} مصروف متبقي من ${FREE_LIMIT} هذا الشهر`,
         "",
-        starF + " *البريميوم يمنحك:*",
-        "   " + chk + " تسجيل غير محدود للمصاريف",
-        "   " + chk + " تقارير متقدمة وإحصائيات",
-        "   " + chk + " تنبيهات ذكية للميزانية",
-        "   " + chk + " تصدير PDF",
+        "*البريميوم يمنحك:*",
+        "   " + String.fromCodePoint(0x2705) + " تسجيل غير محدود للمصاريف",
+        "   " + String.fromCodePoint(0x2705) + " تقارير متقدمة وإحصائيات",
+        "   " + String.fromCodePoint(0x2705) + " تنبيهات ذكية للميزانية",
+        "   " + String.fromCodePoint(0x2705) + " تصدير PDF",
         "",
-        "*روابط الدفع الفوري:*",
-      ];
-      if (monthly.success && monthly.url) {
-        msgLines.push(cal1 + " *شهري — 1.5 ر.ع:*");
-        msgLines.push(lnk + " " + monthly.url);
-      } else {
-        msgLines.push(cal1 + " شهري 1.5 ر.ع — أرسل *اشتراك شهري*");
-      }
-      msgLines.push("");
-      if (yearly.success && yearly.url) {
-        msgLines.push(cal2 + " *سنوي — 15 ر.ع (شهران مجاناً):*");
-        msgLines.push(lnk + " " + yearly.url);
-      } else {
-        msgLines.push(cal2 + " سنوي 15 ر.ع — أرسل *اشتراك سنوي*");
-      }
-      msgLines.push("");
-      msgLines.push(party + " بعد الدفع يتفعل اشتراكك تلقائياً");
-      await sendWA(from, msgLines.join("\n"));
+        cal1 + " *شهري: 1.5 ر.ع/شهر*",
+        cal2 + " *سنوي: 15 ر.ع/سنة* (شهران مجاناً)",
+        "",
+        link + " *اشترك الآن من هنا:*",
+        pricingUrl,
+        "",
+        party + " بعد الدفع يتفعل اشتراكك تلقائياً",
+      ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
 
@@ -1229,7 +1213,7 @@ export async function POST(req: NextRequest) {
           "",
           "⭐ *البريميوم: 1.5 ر.ع/شهر فقط*",
           "",
-          String.fromCodePoint(0x1F4AC) + " أرسل *اشتراك* للحصول على رابط الدفع الفوري",
+          String.fromCodePoint(0x1F517) + " اشترك الآن: " + APP_BASE_URL + "/pricing?phone=" + from,
         ].join("\n"));
         return NextResponse.json({ status: "ok" });
       }
