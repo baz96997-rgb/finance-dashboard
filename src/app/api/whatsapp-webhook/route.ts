@@ -7,22 +7,22 @@ export const runtime = "edge";
 const PHONE_NUMBER_ID = process.env.WHATSAPP_PHONE_NUMBER_ID!;
 const ACCESS_TOKEN    = process.env.WHATSAPP_ACCESS_TOKEN!;
 const VERIFY_TOKEN    = process.env.WEBHOOK_VERIFY_TOKEN ?? "mizar-verify-2025";
-const ADMIN_PHONE     = "96896997977"; // رقم المدير
+const ADMIN_PHONE     = "96896997977";
 const AMWAL_MERCHANT  = parseInt(process.env.AMWALPAY_MERCHANT_ID ?? "141336", 10);
 const AMWAL_TERMINAL  = parseInt(process.env.AMWALPAY_TERMINAL_ID ?? "679610", 10);
 const AMWAL_KEY       = process.env.AMWALPAY_SECURE_KEY ?? "5C1683D1EF9511A8CF13CA396F2CB6FA0461DD411AEAA2E994DCE333E0CF1549";
 const AMWAL_BASE      = "https://webhook.amwalpg.com";
-const DASHBOARD_URL   = "https://dashboard.baz96997.workers.dev";
+const DASHBOARD_URL   = "dashboard.baz96997.workers.dev";
 const APP_BASE_URL    = "https://finance-dashboard-ca6.pages.dev";
 
-// ─── خريطة البلد → العملة ────────────────────────────────────
+// ─── خريطة البلد → العملة ──────────────────────────────────────────────
 const COUNTRY_CURRENCY_MAP: Record<string, string> = {
-  "974": "QAR", "971": "AED", "966": "SAR", "965": "KWD",
+  "974": "QAR", "971": "AED", "966": "SAR", "965": "KWT",
   "973": "BHD", "962": "JOD", "20": "EGP",
-  // 968 = OMR (الافتراضي)
+  // 968 = OMR (الاقتراضي)
 };
 
-// ─── إعدادات عرض العملات ─────────────────────────────────────
+// ─── إعداد عملات العالم ──────────────────────────────────────────────────
 const CURRENCY_CONFIG: Record<string, { symbol: string; decimals: number; subunit: string; rate: number }> = {
   "OMR": { symbol: "ر.ع", decimals: 3, subunit: "بيسة", rate: 1 },
   "KWD": { symbol: "د.ك", decimals: 3, subunit: "فلس",  rate: 1.22 },
@@ -30,7 +30,7 @@ const CURRENCY_CONFIG: Record<string, { symbol: string; decimals: number; subuni
   "JOD": { symbol: "د.أ", decimals: 3, subunit: "فلس",  rate: 0.706 },
   "QAR": { symbol: "ر.ق", decimals: 2, subunit: "درهم", rate: 0.103 },
   "SAR": { symbol: "ر.س", decimals: 2, subunit: "هللة", rate: 0.103 },
-  "AED": { symbol: "د.إ", decimals: 2, subunit: "فلس",  rate: 0.1026 },
+  "AED": { symbol: "د.أ", decimals: 2, subunit: "فلس",  rate: 0.1026 },
   "EGP": { symbol: "ج.م", decimals: 2, subunit: "قرش",  rate: 0.0203 },
 };
 
@@ -41,22 +41,22 @@ function getCurrencyFromPhone(phone: string): string {
   return "OMR";
 }
 
-// ─── حد الخطة المجانية ──────────────────────────────────────
-const FREE_LIMIT = 30; // مصروف/شهر
+// ─── حد الخطة المجانية ───────────────────────────────────────────────────
+const FREE_LIMIT = 30;
 
-// ─── فئات المصاريف ──────────────────────────────────────────
+// ─── فئات المصاريف ──────────────────────────────────────────────────────
 const CATEGORIES: Record<string, { keywords: string[]; label: string; icon: string; tips: string[] }> = {
-  food:          { keywords: ["اكل","طعام","مطعم","غداء","عشاء","فطور","قهوة","كافيه","وجبة","بيتزا","برغر","كنتاكي","شاورما","حلويات","سوبرماركت","بقالة","هايبر","لولو","كارفور","جمعية","مقهى","ماكدونالدز","بروستد","شاي","كرك"], label: "طعام وشراب", icon: "🍔", tips: ["حاول الطبخ في البيت أكثر لتوفير تكاليف الطعام 🍳","ابحث عن العروض والتخفيضات في المطاعم 🏷️","خطط لوجباتك الأسبوعية مسبقاً لتوفير المال 📋"] },
-  transport:     { keywords: ["بنزين","وقود","تاكسي","كريم","اوبر","مواصلات","بص","صيانة","غسيل سيارة","باص","قطار","طيران"], label: "مواصلات", icon: "🚗", tips: ["حاول مشاركة الركوب مع الزملاء لتوفير الوقود ⛽","تحقق من ضغط الإطارات بانتظام يوفر الوقود 🔧","فكر في استخدام النقل العام عند الإمكان 🚌"] },
-  utilities:     { keywords: ["كهرباء","ماء","انترنت","هاتف","جوال","فاتورة","تليفون","موبايل نت","نت"], label: "فواتير", icon: "💡", tips: ["أطفئ الأجهزة الكهربائية عند عدم الاستخدام 🔌","قارن بين باقات الإنترنت للحصول على الأوفر 📡","راجع اشتراكاتك وألغِ غير الضروري منها ❌"] },
-  health:        { keywords: ["دواء","دكتور","طبيب","صيدلية","مستشفى","عيادة","علاج","كشف"], label: "صحة", icon: "🏥", tips: ["الوقاية أفضل من العلاج — مارس الرياضة يومياً 🏃","تأكد من تغطية التأمين الصحي لمصاريفك الطبية 🏥","اشترِ الأدوية الجنيسة بدلاً من الماركات لتوفير المال 💊"] },
-  entertainment: { keywords: ["سينما","ترفيه","العاب","رحلة","فندق","نزهة","نتفليكس","سبوتيفاي","يوتيوب"], label: "ترفيه", icon: "🎮", tips: ["خصص ميزانية شهرية للترفيه وتمسك بها 🎯","ابحث عن أنشطة ترفيهية مجانية في منطقتك 🌳","شارك اشتراكات المنصات مع العائلة لتوفير التكلفة 👨‍👩‍👧"] },
-  shopping:      { keywords: ["ملابس","ثياب","حذاء","ساعة","تسوق","هدية","موبايل","جهاز","اثاث","ديكور","حقيبة"], label: "تسوق", icon: "🛍️", tips: ["انتظر موسم التخفيضات قبل الشراء 🏷️","اسأل نفسك: هل أحتاجه فعلاً؟ انتظر 24 ساعة قبل الشراء ⏰","قارن الأسعار عبر الإنترنت قبل الشراء 📱"] },
-  education:     { keywords: ["كتاب","دورة","تعليم","رسوم","قرطاسية","جامعة","مدرسة","كورس"], label: "تعليم", icon: "📚", tips: ["الاستثمار في التعليم هو أفضل استثمار 🎓","ابحث عن دورات مجانية عبر الإنترنت 💻","استخدم المكتبة العامة للكتب مجاناً 📖"] },
-  savings:       { keywords: ["توفير","ادخار","استثمار","بنك","صندوق"], label: "مدخرات", icon: "🏦", tips: ["احرص على توفير 20٪ من دخلك الشهري 💪","قاعدة 50/30/20: 50 ضروريات، 30 رغبات، 20 مدخرات 📊","ابدأ صندوق طوارئ يغطي 3-6 أشهر من المصاريف 🛡️"] },
+  food:          { keywords: ["اكل","طعام","مطعم","غداء","عشاء","فطور","قهوة","كافيه","وجبة","بيتزا","برغر","كنتاكي","شاورما","حلويات","سوبرماركت","بقالة","هايبر","لولو","كارفور","جمعية","مقهى","ماكدونالدز","بروستد","سوبر","كارفر","جمعيه","مقهه","هايبور","لولو","سوبرمارك"], label: "طعام وشراب", icon: "🍔", tips: ["حاول الطبخ في البيت أكثر لتوفير 30-40% من ميزانية الطعام 🍳","ابحث عن عروض وتخفيضات في المطاعم لتوفير في الطعام 🏷️","خطط لوجباتك الأسبوعية مسبقاً لتقليل الإنفاق العشوائي على الطعام 📋"] },
+  transport:     { keywords: ["بنزين","وقود","تاكسي","كريم","اوبر","مواصلات","بص","صيانة","غسيل سيارة","باص","قطار","طيران"], label: "مواصلات", icon: "🚗", tips: ["حاول مشاركة الركوب مع زملاء العمل لتوفير في الوقود ⛽","تحقق من مواعيد الباص الأكثر كفاءة لتوفير في المواصلات 🚌","فكر في استخدام الدراجة أو المشي للمسافات القصيرة 🚲"] },
+  utilities:     { keywords: ["كهرباء","ماء","انترنت","هاتف","جوال","اشتراك","فاتورة","تليفون","موبايل نت","نت"], label: "فواتير", icon: "💡", tips: ["أطفئ الأجهزة الكهربائية عند عدم الاستخدام لتوفير في الفواتير 🔌","قارن بين باقات الإنترنت للحصول على أفضل سعر 📱","راجع اشتراكاتك وألغِ ما لا تحتاجه من الخدمات ❌"] },
+  health:        { keywords: ["دواء","دكتور","طبيب","صيدلية","مستشفى","عيادة","علاج","كشف"], label: "صحة", icon: "🏥", tips: ["الوقاية أفضل من العلاج — مارس الرياضة ونم جيداً 🏃","تأكد من مقارنة الأدوية الجنيسة للحصول على بدائل أرخص 🏥","احتفظ بتأمين صحي جيد لتغطية مصاريف الطب الكبيرة 💊"] },
+  entertainment: { keywords: ["سينما","ترفيه","العاب","رحلة","فندق","نزهة","اشتراك نتفليكس","سبوتيفاي","يوتيوب","سبوتيفي"], label: "ترفيه", icon: "🎮", tips: ["خصص ميزانية شهرية للترفيه وتمسك بها 🎯","ابحث عن أماكن ترفيهية مجانية في منطقتك لتوفير المال 🌳","قارن اشتراكات المنصات وتأكد من استخدامها قبل التجديد 📺"] },
+  shopping:      { keywords: ["ملابس","ثياب","حذاء","ساعة","تسوق","هدية","موبايل","جهاز","اثاث","ديكور","حقيبة","اثاث","ديكور","حقيبه"], label: "تسوق", icon: "🛍️", tips: ["انتظر موسم التخفيضات لشراء الملابس والهدايا 🏷️","اسأل نفسك: هل أحتاج هذا فعلاً أو مجرد رغبة في الشراء 24 ساعة قبل الشراء ⏰","قارن الأسعار عبر الإنترنت قبل الشراء من المتاجر التقليدية 💻"] },
+  education:     { keywords: ["كتاب","دورة","تعليم","رسوم","قرطاسية","جامعة","مدرسة","كورس"], label: "تعليم", icon: "📚", tips: ["الاستثمار في التعليم هو أفضل استثمار لمستقبلك 🎓","ابحث عن دورات مجانية أو برعاية الإنترنت 💻","استخدم المكتبة العامة للكتب والمصادر التعليمية الكبيرة 📖"] },
+  savings:       { keywords: ["توفير","ادخار","استثمار","بنك","صندوق"], label: "مدخرات", icon: "🏦", tips: ["احرص على توفير 20% من دخلك كل شهر 💰","قاعدة 50/30/20: 50 ضروريات، 30 رغبات، 20 مدخرات 💸","ابدأ صندوق طوارئ يغطي 3-6 أشهر من المصاريف الأساسية 🏦"] },
 };
 
-// ─── واجهات البيانات ─────────────────────────────────────────
+// ─── واجهات البيانات ────────────────────────────────────────────────────
 interface Expense {
   id: string;
   amount: number;
@@ -74,12 +74,6 @@ interface Expense {
   source: "whatsapp";
 }
 
-interface UserSettings {
-  dailyBudget: number;
-  currency: string;
-  monthlyIncome?: number; // الراتب / الدخل الشهري بالـ OMR (اختياري)
-}
-
 interface UserProfile {
   totalExpenses: number;
   streak: number;
@@ -92,11 +86,11 @@ interface Subscription {
   plan: "free" | "premium";
   expiresAt: string | null;
   activatedAt: string | null;
-  monthlyCount: number; // عدد المصاريف هذا الشهر (للخطة المجانية)
-  lastResetMonth: string; // "2026-11"
+  monthlyCount: number;
+  lastResetMonth: string;
 }
 
-// ─── أموال: HMAC-SHA256 (Edge Runtime) ───────────────────────
+// ─── HMAC-SHA256 (Edge Runtime) ─────────────────────────────────────────
 function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
   const bytes = new Uint8Array(hex.length / 2) as Uint8Array<ArrayBuffer>;
   for (let i = 0; i < hex.length; i += 2) {
@@ -123,7 +117,7 @@ async function calcAmwalHash(obj: Record<string, any>): Promise<string> {
   return Array.from(new Uint8Array(sig)).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
-// ─── Amwal: تهيئة الدفع ──────────────────────────────────────
+// ─── Amwal: تهيئة الدفع ─────────────────────────────────────────────────
 async function initAmwalPayment(phone: string, plan: "monthly" | "yearly"): Promise<{ success: boolean; url?: string; error?: string }> {
   const amount = plan === "yearly" ? 15 : 1.5;
   const ref = `SW-${phone}-${Date.now()}`;
@@ -163,7 +157,7 @@ async function initAmwalPayment(phone: string, plan: "monthly" | "yearly"): Prom
   }
 }
 
-// ─── فحص الاشتراك ───────────────────────────────────────────
+// ─── فحص الاشتراك ──────────────────────────────────────────────────────
 async function getSubscription(KV: KVNamespace, phone: string): Promise<Subscription> {
   const sub: Subscription = (await KV.get(`sub:${phone}`, "json")) ?? {
     plan: "free",
@@ -173,7 +167,6 @@ async function getSubscription(KV: KVNamespace, phone: string): Promise<Subscrip
     lastResetMonth: "",
   };
 
-  // إعادة تعيين العداد الشهري
   const currentMonth = new Date().toISOString().slice(0, 7);
   if (sub.lastResetMonth !== currentMonth) {
     sub.monthlyCount = 0;
@@ -181,7 +174,6 @@ async function getSubscription(KV: KVNamespace, phone: string): Promise<Subscrip
     await KV.put(`sub:${phone}`, JSON.stringify(sub));
   }
 
-  // التحقق من انتهاء الاشتراك المدفوع
   if (sub.plan === "premium" && sub.expiresAt && new Date(sub.expiresAt) < new Date()) {
     sub.plan = "free";
     sub.expiresAt = null;
@@ -199,40 +191,40 @@ function remainingFree(sub: Subscription): number {
   return Math.max(0, FREE_LIMIT - sub.monthlyCount);
 }
 
-// ─── تحويل الأرقام العربية/الهندية ──────────────────────────
+// ─── تحويل الأرقام العربية/الهندية ──────────────────────────────────────
 function convertDigits(s: string): string {
   return s.replace(/[٠-٩]/g, d => String(d.charCodeAt(0) - 0x0660));
 }
 
-// ─── العملات الخليجية ────────────────────────────────────────
+// ─── العملات الخليجية ───────────────────────────────────────────────────
 const CURRENCIES: Record<string, { label: string; rate: number }> = {
   "ر.ع": { label: "ر.ع", rate: 1 }, "ريال عماني": { label: "ر.ع", rate: 1 }, "omr": { label: "ر.ع", rate: 1 },
   "بيسة": { label: "بيسة", rate: 0.001 }, "بيسات": { label: "بيسة", rate: 0.001 },
   "ر.س": { label: "ر.س", rate: 0.103 }, "ريال سعودي": { label: "ر.س", rate: 0.103 }, "sar": { label: "ر.س", rate: 0.103 },
-  "درهم": { label: "د.إ", rate: 0.1026 }, "د.إ": { label: "د.إ", rate: 0.1026 }, "aed": { label: "د.إ", rate: 0.1026 },
+  "درهم": { label: "د.أ", rate: 0.1026 }, "د.أ": { label: "د.أ", rate: 0.1026 }, "aed": { label: "د.أ", rate: 0.1026 },
   "د.ك": { label: "د.ك", rate: 1.22 }, "دينار كويتي": { label: "د.ك", rate: 1.22 },
   "د.ب": { label: "د.ب", rate: 1.055 }, "دينار بحريني": { label: "د.ب", rate: 1.055 },
   "ر.ق": { label: "ر.ق", rate: 0.103 }, "ريال قطري": { label: "ر.ق", rate: 0.103 },
 };
 
-// ─── استخراج المبلغ ──────────────────────────────────────────
+// ─── استخراج المبلغ ─────────────────────────────────────────────────────
 function extractAmount(text: string, defaultCurrency = "OMR"): { amount: number; currency: string; amountOMR: number } | null {
   const t = convertDigits(text);
   const defCfg = CURRENCY_CONFIG[defaultCurrency] ?? CURRENCY_CONFIG["OMR"];
   const numWords: Record<string, number> = {
-    "نص": 0.5, "نصف": 0.5, "ربع": 0.25, "ثلاثة ارباع": 0.75,
-    "واحد": 1, "اثنين": 2, "اثنان": 2, "ثلاثة": 3, "اربعة": 4, "خمسة": 5,
+    "نص": 0.5, "نصف": 0.5, "ربع": 0.25, "ثلاثة أرباع": 0.75,
+    "واحد": 1, "اثنين": 2, "اثنان": 2, "ثلاثة": 3, "أربعة": 4, "خمسة": 5,
     "ستة": 6, "سبعة": 7, "ثمانية": 8, "تسعة": 9, "عشرة": 10,
     "خمستاشر": 15, "خمسطعش": 15, "عشرين": 20, "خمسة وعشرين": 25,
-    "ثلاثين": 30, "اربعين": 40, "خمسين": 50, "ستين": 60, "سبعين": 70,
+    "ثلاثين": 30, "أربعين": 40, "خمسين": 50, "ستين": 60, "سبعين": 70,
     "ثمانين": 80, "تسعين": 90, "مية": 100, "مئة": 100, "مائة": 100,
-    "مئتين": 200, "ميتين": 200, "خمسمية": 500, "الف": 1000, "ألف": 1000,
+    "ميتين": 200, "مئتين": 200, "خمسمية": 500, "الف": 1000, "ألف": 1000,
   };
 
-  // ريالين / درهمين (صيغة المثنى) - تشمل بريالين/بدرهمين
+  // ريالين / درهمين / دينارين (مثنى) — تطابق مع أو بدون "ب" في البداية
   const dual = t.match(/ب?ريالين|ب?درهمين|ب?دينارين/);
   if (dual) {
-    const curr = dual[0].includes("ريالين") ? "ر.ع" : dual[0].includes("درهمين") ? "درهم" : "د.ك";
+    const curr = dual[0].includes("ريالين") ? "ر.ع" : dual[0].includes("درهمين") ? "د.أ" : "د.ك";
     const info = CURRENCIES[curr];
     return { amount: 2, currency: info.label, amountOMR: 2 * info.rate };
   }
@@ -267,10 +259,9 @@ function extractAmount(text: string, defaultCurrency = "OMR"): { amount: number;
   return null;
 }
 
-// ─── تنسيق المبلغ (بالعملة المحلية للمستخدم) ────────────────
+// ─── تنسيق المبلغ ──────────────────────────────────────────────────────
 function formatOMR(v: number, currency = "OMR"): string {
   const cfg = CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG["OMR"];
-  // v يُفترض أنه بالريال العُماني — حوّله إلى عملة المستخدم
   const displayV = currency === "OMR" ? v : v / cfg.rate;
   if (cfg.decimals === 3) {
     if (displayV < 1) return `${Math.round(displayV * 1000)} ${cfg.subunit}`;
@@ -281,7 +272,7 @@ function formatOMR(v: number, currency = "OMR"): string {
   }
 }
 
-// ─── تحليل المصروف ───────────────────────────────────────────
+// ─── تحليل المصروف ──────────────────────────────────────────────────────
 function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
   const extracted = extractAmount(text, defaultCurrency);
   if (!extracted) return null;
@@ -290,7 +281,7 @@ function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
 
   const lowerText = text.toLowerCase();
   let category = "other", categoryLabel = "أخرى", categoryIcon = "📦", subcategory = "";
-  let tips: string[] = ["تابع مصاريفك يومياً لتحسين عاداتك المالية 💡"];
+  let tips: string[] = ["تابع مصاريفك يومياً لتحسين إنفاقك وادخار المال 💡"];
 
   for (const [cat, { keywords, label, icon, tips: catTips }] of Object.entries(CATEGORIES)) {
     if (keywords.some(kw => lowerText.includes(kw))) {
@@ -302,8 +293,8 @@ function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
 
   // طريقة الدفع
   let paymentMethod = "نقداً";
-  if (/بطاق|فيزا|ماستر|كارت|card/i.test(text)) paymentMethod = "بطاقة";
-  else if (/تحويل|اونلاين|online|مدفع|stc|oman.*net|بنك/i.test(text)) paymentMethod = "دفع رقمي";
+  if (/بطاق|فيزا|ماستر|card/i.test(text)) paymentMethod = "بطاقة";
+  else if (/تحويل|اونلاين|online|stc|oman.*net|بنك/i.test(text)) paymentMethod = "دفع رقمي";
   else if (/آجل|دين|تقسيط|قسط/i.test(text)) paymentMethod = "آجل";
 
   // تقسيط
@@ -311,10 +302,12 @@ function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
   const instMatch = text.match(/(\d+)\s*(?:قسط|أقساط)\s*(?:من|\/)\s*(\d+)/);
   if (instMatch) { installments = parseInt(instMatch[1]); totalInstallments = parseInt(instMatch[2]); }
 
+  // تنظيف الوصف
   const cleanDesc = text
+    .replace(/ب?ريالين|ب?درهمين|ب?دينارين/g, "")  // إزالة المثنى أولاً (يشمل ب)
     .replace(/\d+(?:[.,]\d+)?/g, "")
     .replace(new RegExp(Object.keys(CURRENCIES).join("|"), "gi"), "")
-    .replace(/\b(مصروف|صرفت|دفعت|اشتريت|اكلت|شريت|خرج|خلصت|بطاق|نقد|تحويل)\b/gi, "")
+    .replace(/\b(مصروف|صرفت|دفعت|اشتريت|اكلت|شريت|خرج|خلصت|اشترت|دفع|اكل|خلص)\b/gi, "")
     .replace(/\s+/g, " ").trim();
 
   return {
@@ -328,16 +321,7 @@ function parseExpense(text: string, defaultCurrency = "OMR"): Expense | null {
   };
 }
 
-// ─── مستوى اللاعب ────────────────────────────────────────────
-function getLevel(total: number): { num: number; icon: string; name: string } {
-  if (total < 10)  return { num: 1, icon: "🌱", name: "مبتدئ" };
-  if (total < 30)  return { num: 2, icon: "⭐", name: "منتظم" };
-  if (total < 60)  return { num: 3, icon: "🔥", name: "متميز" };
-  if (total < 100) return { num: 4, icon: "💎", name: "محترف" };
-  if (total < 200) return { num: 5, icon: "👑", name: "خبير" };
-  return { num: 6, icon: "🏆", name: "أسطورة" };
-}
-
+// ─── تحديث سلسلة الأيام ─────────────────────────────────────────────────
 function updateStreak(profile: UserProfile): UserProfile {
   const today = new Date().toISOString().slice(0, 10);
   const last  = profile.lastExpenseDate?.slice(0, 10) ?? "";
@@ -349,122 +333,7 @@ function updateStreak(profile: UserProfile): UserProfile {
   return profile;
 }
 
-// ─── تحليل مالي شخصي مبني على بيانات حقيقية ─────────────────
-function buildPersonalAnalysis(
-  expenses: Expense[],
-  income: number,
-  phone: string,
-  currency = "OMR",
-): string {
-  const now   = new Date();
-  const month = expenses.filter(e => {
-    const d = new Date(e.date);
-    return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-  });
-
-  const totalSpent = month.reduce((s, e) => s + e.amountOMR, 0);
-
-  // تجميع حسب الفئة
-  const byCategory: Record<string, number> = {};
-  month.forEach(e => {
-    byCategory[e.category] = (byCategory[e.category] ?? 0) + e.amountOMR;
-  });
-
-  const hasIncome = income > 0;
-  const spentPct  = hasIncome ? (totalSpent / income) * 100 : 0;
-  const remaining = hasIncome ? income - totalSpent : 0;
-  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  const daysLeft    = daysInMonth - now.getDate();
-  const dailyLeft   = daysLeft > 0 ? remaining / daysLeft : 0;
-  const avgDaily    = now.getDate() > 0 ? totalSpent / now.getDate() : 0;
-
-  // المثاليات
-  const IDEAL: Record<string, number> = {
-    food: 15, transport: 10, utilities: 10,
-    health: 5, entertainment: 5, shopping: 10, education: 5, savings: 20,
-  };
-
-  const lines: string[] = [];
-  lines.push(`📊 *تحليلك المالي لـ ${now.toLocaleDateString("ar-OM", { month: "long" })}*`);
-  lines.push("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄");
-
-  if (hasIncome) {
-    lines.push(`💼 الدخل الشهري: *${formatOMR(income, currency)}*`);
-    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent, currency)}* (${spentPct.toFixed(0)}٪ من دخلك)`);
-    lines.push(`💰 المتبقي: *${formatOMR(remaining, currency)}* — أي *${formatOMR(dailyLeft, currency)}* يومياً لـ ${daysLeft} يوم`);
-  } else {
-    lines.push(`💸 إجمالي الإنفاق: *${formatOMR(totalSpent, currency)}*`);
-    lines.push(`📅 متوسط يومي: *${formatOMR(avgDaily, currency)}*`);
-    lines.push(`⚡ لتحليل دقيق، أرسل: *راتبي [المبلغ]* مثال: راتبي 800`);
-  }
-
-  lines.push("");
-  lines.push("📂 *توزيع مصاريفك:*");
-
-  const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
-  for (const [cat, amt] of sorted) {
-    const catInfo  = CATEGORIES[cat];
-    const label    = catInfo?.label ?? cat;
-    const icon     = catInfo?.icon  ?? "📦";
-    const pct      = hasIncome ? (amt / income) * 100 : 0;
-    const ideal    = IDEAL[cat] ?? 10;
-    const status   = !hasIncome ? "" : pct > ideal * 1.5 ? " 🔴 عالي" : pct > ideal ? " 🟡 فوق المثالي" : " 🟢";
-    const pctStr   = hasIncome ? ` (${pct.toFixed(0)}٪)${status}` : "";
-    lines.push(`   ${icon} ${label}: ${formatOMR(amt, currency)}${pctStr}`);
-  }
-
-  if (!sorted.length) {
-    lines.push("   لا توجد مصاريف مسجلة هذا الشهر بعد");
-  }
-
-  // نصائح مخصصة
-  lines.push("");
-  lines.push("💡 *نصائح بناءً على أرقامك:*");
-
-  let adviceCount = 0;
-  if (hasIncome) {
-    const foodAmt   = byCategory["food"]          ?? 0;
-    const entAmt    = byCategory["entertainment"]  ?? 0;
-    const shopAmt   = byCategory["shopping"]       ?? 0;
-    const savingPct = ((income - totalSpent) / income) * 100;
-
-    if ((foodAmt / income) * 100 > 20) {
-      lines.push(`   🍔 صرفت ${((foodAmt/income)*100).toFixed(0)}٪ من دخلك على الطعام — المثالي 15٪. توفير ${formatOMR(foodAmt - income*0.15, currency)} ممكن بالطبخ في البيت 🍳`);
-      adviceCount++;
-    }
-    if ((entAmt / income) * 100 > 10) {
-      lines.push(`   🎮 الترفيه أخذ ${((entAmt/income)*100).toFixed(0)}٪ — حدّد سقفاً لا يتجاوز 10٪ (${formatOMR(income*0.10, currency)}) 🎯`);
-      adviceCount++;
-    }
-    if ((shopAmt / income) * 100 > 15) {
-      const cfg = CURRENCY_CONFIG[currency] ?? CURRENCY_CONFIG["OMR"];
-      const threshold20 = 20 * cfg.rate; // 20 وحدة بالعملة المحلية → OMR
-      lines.push(`   🛍️ التسوق ${((shopAmt/income)*100).toFixed(0)}٪ من راتبك — انتظر 24 ساعة قبل أي شراء فوق ${formatOMR(threshold20, currency)} ⏰`);
-      adviceCount++;
-    }
-    if (savingPct < 10 && totalSpent > 0) {
-      lines.push(`   💰 وفّرت ${savingPct.toFixed(0)}٪ فقط — الهدف 20٪ أي ${formatOMR(income*0.20, currency)} شهرياً 🏆`);
-      adviceCount++;
-    }
-    if (spentPct > 90) {
-      lines.push(`   🚨 صرفت ${spentPct.toFixed(0)}٪ من دخلك — بقي ${daysLeft} يوم و${formatOMR(remaining, currency)} فقط! تحكّم في الإنفاق الآن`);
-      adviceCount++;
-    }
-    if (adviceCount === 0) {
-      lines.push(`   ✅ ممتاز! إنفاقك متوازن. استمر وفكّر في استثمار الـ ${formatOMR(remaining, currency)} المتبقية 📈`);
-    }
-  } else {
-    lines.push("   أرسل *راتبي [المبلغ]* وأعطيك تحليلاً دقيقاً مقارناً بالمثاليات!");
-  }
-
-  lines.push("");
-  lines.push("┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄");
-  lines.push(`🌐 ${DASHBOARD_URL}?phone=${phone}`);
-  return lines.join("\n");
-}
-
-// ─── إرسال واتساب ────────────────────────────────────────────
-// حل مشكلة surrogate pairs التي ينتجها esbuild
+// ─── إصلاح الإيموجي ─────────────────────────────────────────────────────
 function fixEmoji(s: string): string {
   return s.replace(/\uD([89AB][0-9A-Fa-f]{2})\uD([C-Fc-f][0-9A-Fa-f]{2})/g,
     (_, h, l) => String.fromCodePoint(
@@ -472,35 +341,33 @@ function fixEmoji(s: string): string {
     )
   );
 }
+
 async function sendWA(to: string, body: string) {
   const safe = fixEmoji(body);
   const jsonBody = JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: safe } });
   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json; charset=utf-8" },
-    body: new TextEncoder().encode(jsonBody),
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
+    body: jsonBody,
   });
 }
 
-// ════════════════════════════════════════════════════════════
-// GET — التحقق من الـ Webhook
-// ════════════════════════════════════════════════════════════
+// ─── GET: التحقق من Webhook ──────────────────────────────────────────────
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const mode      = searchParams.get("hub.mode");
   const token     = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
-  if (mode === "subscribe" && token === VERIFY_TOKEN)
+  if (mode === "subscribe" && token === VERIFY_TOKEN) {
     return new Response(challenge ?? "", { status: 200 });
+  }
   return NextResponse.json({ error: "Forbidden" }, { status: 403 });
 }
 
-// ════════════════════════════════════════════════════════════
-// POST — استقبال الرسائل
-// ════════════════════════════════════════════════════════════
+// ─── POST: معالج الرسائل ────────────────────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
-    const body     = await req.json() as Record<string, any>;
+    const body = await req.json();
     const messages = body?.entry?.[0]?.changes?.[0]?.value?.messages;
     if (!messages?.length) return NextResponse.json({ status: "ok" });
 
@@ -513,798 +380,240 @@ export async function POST(req: NextRequest) {
     const { env } = getRequestContext();
     const KV = (env as Record<string, KVNamespace>).EXPENSES_KV;
 
-    const lower = text.toLowerCase().trim();
+    const currency = getCurrencyFromPhone(from);
+    const lowerText = text.toLowerCase();
 
-    // ════════════════════════════════════════════════════════
-    // أوامر المدير (فقط من رقم المدير)
-    // ════════════════════════════════════════════════════════
-    if (from === ADMIN_PHONE) {
-      // منح بريميوم: "منح [رقم] [أيام]" — مثال: "منح 96896465000 30"
-      const grantMatch = text.trim().match(/منح\s+([\d+]+)\s+(\d+)/);
-      if (grantMatch) {
-        const targetPhone = grantMatch[1].replace(/\+/g, "");
-        const days = parseInt(grantMatch[2]);
-        const expiresAt = new Date(Date.now() + days * 86400000).toISOString();
-        const sub: Subscription = {
-          plan: "premium",
-          expiresAt,
-          activatedAt: new Date().toISOString(),
-          monthlyCount: 0,
-          lastResetMonth: new Date().toISOString().slice(0, 7),
-        };
-        await KV.put(`sub:${targetPhone}`, JSON.stringify(sub));
-        await sendWA(from, `✅ تم تفعيل البريميوم للرقم ${targetPhone} لمدة ${days} يوم حتى ${new Date(expiresAt).toLocaleDateString("ar-OM")}`);
-        // إشعار العميل
-        await sendWA(targetPhone, [
-          "🎉 *تهانينا! تم تفعيل اشتراكك المميز*",
-          "",
-          `⭐ خطة البريميوم مفعّلة لمدة *${days} يوم*`,
-          `📅 تنتهي: ${new Date(expiresAt).toLocaleDateString("ar-OM")}`,
-          "",
-          "✅ الآن يمكنك تسجيل مصاريف غير محدودة",
-          "✅ تقارير متقدمة وإحصائيات كاملة",
-          "✅ تنبيهات ذكية للميزانية",
-          "",
-          "ابدأ الآن — أرسل أي مصروف مثل: *50 بنزين* 🚀",
-          `🌐 داشبوردك: ${DASHBOARD_URL}?phone=${targetPhone}`,
-        ].join("\n"));
-        return NextResponse.json({ status: "ok" });
-      }
-
-      // إلغاء بريميوم: "الغ [رقم]"
-      const revokeMatch = text.trim().match(/الغ\s+([\d+]+)/);
-      if (revokeMatch) {
-        const targetPhone = revokeMatch[1].replace(/\+/g, "");
-        const sub: Subscription = (await KV.get(`sub:${targetPhone}`, "json")) ?? {
-          plan: "free", expiresAt: null, activatedAt: null, monthlyCount: 0, lastResetMonth: "",
-        };
-        sub.plan = "free";
-        sub.expiresAt = null;
-        await KV.put(`sub:${targetPhone}`, JSON.stringify(sub));
-        await sendWA(from, `✅ تم إلغاء البريميوم للرقم ${targetPhone}`);
-        return NextResponse.json({ status: "ok" });
-      }
-
-      // حالة مستخدم: "حالة [رقم]"
-      const statusMatch = text.trim().match(/حالة\s+([\d+]+)/);
-      if (statusMatch) {
-        const targetPhone = statusMatch[1].replace(/\+/g, "");
-        const sub = await getSubscription(KV, targetPhone);
-        const premium = isPremium(sub);
-        await sendWA(from, [
-          `📋 حالة الرقم: ${targetPhone}`,
-          `الخطة: ${premium ? "⭐ بريميوم" : "🆓 مجاني"}`,
-          premium ? `تنتهي: ${new Date(sub.expiresAt!).toLocaleDateString("ar-OM")}` : `المصاريف هذا الشهر: ${sub.monthlyCount}/${FREE_LIMIT}`,
-        ].join("\n"));
-        return NextResponse.json({ status: "ok" });
-      }
-
-      // قائمة أوامر المدير
-      if (lower === "admin") {
-        await sendWA(from, [
-          "🛠️ *أوامر المدير:*",
-          "",
-          "منح [رقم] [أيام] — تفعيل بريميوم",
-          "مثال: منح 96896465000 30",
-          "",
-          "الغ [رقم] — إلغاء البريميوم",
-          "مثال: الغ 96896465000",
-          "",
-          "حالة [رقم] — عرض حالة المستخدم",
-          "مثال: حالة 96896465000",
-        ].join("\n"));
-        return NextResponse.json({ status: "ok" });
-      }
-    }
-
-    // ════════════════════════════════════════════════════════
-    // أمر: مساعدة
-    // ════════════════════════════════════════════════════════
-    if (["مساعدة", "help", "?", "؟", "اوامر"].includes(lower)) {
-      const sub = await getSubscription(KV, from);
-      const planBadge = isPremium(sub) ? "⭐ بريميوم" : `🆓 مجاني (${remainingFree(sub)}/${FREE_LIMIT} متبقي)`;
+    // ─── مساعدة ──────────────────────────────────────────────────────
+    if (["مساعدة", "مساعده", "help", "?", "؟"].includes(lowerText)) {
       await sendWA(from, [
-        "💎 *رفيقك المالي — الأوامر المتاحة*",
+        "💎 *مساعدة — بوت مصاريف ميزار*",
         "",
         "📝 *تسجيل مصروف:*",
-        "  مثال: 50 بنزين",
-        "  مثال: 100 ريال اكل مطعم",
-        "  مثال: 500 بيسة قهوة",
+        "  اشتريت عشا بريالين",
+        "  3.500 بنزين",
+        "  دواء بخمسة ريال",
         "",
-        "📊 *ملخص* — تحليل مالي شخصي مبني على أرقامك",
-        "💼 *راتبي 800* — حفظ دخلك الشهري لتحليل دقيق",
-        "📋 *قائمة* — آخر 5 مصاريف",
-        "🗑️ *حذف* — حذف آخر مصروف",
-        "💰 *ميزانية 50* — تعيين ميزانية يومية",
-        "💳 *اشتراك* — ترقية للبريميوم",
+        "📊 *ملخص الشهر:*  ملخص",
+        "📋 *آخر المصاريف:*  قائمة",
+        "🗑️ *حذف آخر مصروف:*  حذف",
+        "📈 *تحليل مصاريفي:*  تحليل",
         "",
-        `📌 خطتك الحالية: ${planBadge}`,
+        "✅ أرسل أي مصروف بالمبلغ والوصف!",
         `🌐 ${DASHBOARD_URL}?phone=${from}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
 
-    // ════════════════════════════════════════════════════════
-    // أمر: اشتراك
-    // ════════════════════════════════════════════════════════
-    if (["اشتراك", "اشترك", "subscribe", "بريميوم", "premium", "ترقية"].includes(lower)) {
-      const sub = await getSubscription(KV, from);
+    // ─── ملخص الشهر ───────────────────────────────────────────────
+    if (["ملخص", "رصيد", "summary"].includes(lowerText)) {
+      const expenses: Expense[] = (await KV?.get(`wa:${from}`, "json")) ?? [];
+      const now = new Date();
+      const thisMonth = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+      const total = thisMonth.reduce((s, e) => s + e.amountOMR, 0);
+      const byCategory: Record<string, number> = {};
+      thisMonth.forEach(e => {
+        byCategory[`${e.categoryIcon} ${e.categoryLabel}`] = (byCategory[`${e.categoryIcon} ${e.categoryLabel}`] ?? 0) + e.amountOMR;
+      });
 
-      if (isPremium(sub)) {
-        const exp = new Date(sub.expiresAt!).toLocaleDateString("ar-OM");
-        await sendWA(from, [
-          "✅ *أنت مشترك في الخطة المميزة!* ⭐",
-          "",
-          `📅 الاشتراك ساري حتى: ${exp}`,
-          `🌐 داشبوردك: ${DASHBOARD_URL}?phone=${from}`,
-        ].join("\n"));
-        return NextResponse.json({ status: "ok" });
-      }
+      // الإنفاق اليومي
+      const today = now.toISOString().slice(0, 10);
+      const todayTotal = thisMonth.filter(e => e.date.startsWith(today)).reduce((s, e) => s + e.amountOMR, 0);
+      const avgDaily = now.getDate() > 0 ? total / now.getDate() : 0;
 
-      // إرسال رابط صفحة الأسعار
-      const gem   = String.fromCodePoint(0x1F48E); // 💎
-      const link  = String.fromCodePoint(0x1F517); // 🔗
-      const cal1  = String.fromCodePoint(0x1F4C5); // 📅
-      const cal2  = String.fromCodePoint(0x1F4C6); // 📆
-      const party = String.fromCodePoint(0x1F389); // 🎉
-      const pricingUrl = `${APP_BASE_URL}/pricing?phone=${from}`;
+      const lines = Object.entries(byCategory)
+        .sort((a, b) => b[1] - a[1])
+        .map(([cat, amt]) => `  ${cat}: ${formatOMR(amt, currency)}`);
+
       await sendWA(from, [
-        gem + " *ترقية إلى البريميوم*",
+        `📊 *ملخص ${now.toLocaleDateString("ar-SA", { month: "long", year: "numeric" })}*`,
+        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
+        `💸 الإجمالي: *${formatOMR(total, currency)}*`,
+        `📅 اليوم: *${formatOMR(todayTotal, currency)}*`,
+        `📆 متوسط يومي: *${formatOMR(avgDaily, currency)}*`,
+        `🧾 عدد المعاملات: ${thisMonth.length}`,
         "",
-        "*خطتك الحالية:*",
-        `   ${remainingFree(sub)} مصروف متبقي من ${FREE_LIMIT} هذا الشهر`,
+        "📂 *حسب الفئة:*",
+        ...lines,
         "",
-        "*البريميوم يمنحك:*",
-        "   " + String.fromCodePoint(0x2705) + " تسجيل غير محدود للمصاريف",
-        "   " + String.fromCodePoint(0x2705) + " تقارير متقدمة وإحصائيات",
-        "   " + String.fromCodePoint(0x2705) + " تنبيهات ذكية للميزانية",
-        "   " + String.fromCodePoint(0x2705) + " تصدير PDF",
-        "",
-        cal1 + " *شهري: 1.5 ر.ع/شهر*",
-        cal2 + " *سنوي: 15 ر.ع/سنة* (شهران مجاناً)",
-        "",
-        link + " *اشترك الآن من هنا:*",
-        pricingUrl,
-        "",
-        party + " بعد الدفع يتفعل اشتراكك تلقائياً",
+        `🌐 ${DASHBOARD_URL}?phone=${from}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
 
-    // ════════════════════════════════════════════════════════
-    // أمر: اشتراك شهري / سنوي
-    // ════════════════════════════════════════════════════════
-    if (["اشتراك شهري", "شهري", "monthly"].includes(lower) ||
-        ["اشتراك سنوي", "سنوي", "yearly", "annual"].includes(lower)) {
-      const plan = ["اشتراك سنوي", "سنوي", "yearly", "annual"].includes(lower) ? "yearly" : "monthly";
-      const price = plan === "yearly" ? "15 ر.ع" : "1.5 ر.ع";
-
-      await sendWA(from, `⏳ جاري تجهيز رابط الدفع (${price})...`);
-
-      const result = await initAmwalPayment(from, plan);
-      if (result.success && result.url) {
-        await sendWA(from, [
-          `💳 *رابط الدفع جاهز!*`,
-          "",
-          `📦 الخطة: ${plan === "yearly" ? "سنوية" : "شهرية"}`,
-          `💰 السعر: ${price}`,
-          "",
-          `🔗 ${result.url}`,
-          "",
-          "✅ بعد الدفع يتفعل اشتراكك تلقائياً 🎉",
-        ].join("\n"));
-      } else {
-        await sendWA(from, [
-          "❌ *حدث خطأ في تجهيز رابط الدفع*",
-          "",
-          "يرجى المحاولة مرة أخرى لاحقاً أو التواصل مع الدعم.",
-        ].join("\n"));
-      }
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ════════════════════════════════════════════════════════
-    // أمر: راتبي {مبلغ} — حفظ الدخل الشهري
-    // ════════════════════════════════════════════════════════
-    const incomeMatch = lower.match(/^راتبي\s+([\d٠-٩]+(?:[.,][\d٠-٩]+)?)/);
-    if (incomeMatch) {
-      const incomeAmt = parseFloat(incomeMatch[1].replace(/[٠-٩]/g, d => String("٠١٢٣٤٥٦٧٨٩".indexOf(d))).replace(",", "."));
-      if (!isNaN(incomeAmt) && incomeAmt > 0) {
-        const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
-        const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
-        const incomeCfg = CURRENCY_CONFIG[userCurrency] ?? CURRENCY_CONFIG["OMR"];
-        // نخزّن الدخل بالريال العُماني للمقارنة الموحّدة
-        settings.monthlyIncome = incomeAmt * incomeCfg.rate;
-        await KV.put(`settings:${from}`, JSON.stringify(settings));
-        await sendWA(from, [
-          `✅ *تم حفظ دخلك الشهري: ${formatOMR(settings.monthlyIncome, userCurrency)}*`,
-          "",
-          "الآن أقدر أعطيك تحليل مالي دقيق مبني على راتبك الفعلي! 📊",
-          "أرسل *ملخص* لتشوف تحليلك الشخصي مع النسب والنصائح.",
-        ].join("\n"));
-      } else {
-        await sendWA(from, "❌ المبلغ غير صحيح. مثال: *راتبي 800*");
-      }
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ════════════════════════════════════════════════════════
-    // أمر: ملخص — تحليل مالي شخصي مبني على البيانات الحقيقية
-    // ════════════════════════════════════════════════════════
-    if (["ملخص", "رصيد", "summary"].includes(lower)) {
-      const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
-      const income = settings.monthlyIncome ?? 0;
-      const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
-
-      await sendWA(from, buildPersonalAnalysis(expenses, income, from, userCurrency));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ════════════════════════════════════════════════════════
-    // أمر: قائمة
-    // ════════════════════════════════════════════════════════
-    if (["قائمة", "المصاريف", "list"].includes(lower)) {
-      const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
+    // ─── قائمة آخر المصاريف ───────────────────────────────────────
+    if (["قائمة", "المصاريف", "list"].includes(lowerText)) {
+      const expenses: Expense[] = (await KV?.get(`wa:${from}`, "json")) ?? [];
       const last5 = expenses.slice(-5).reverse();
       if (!last5.length) {
-        await sendWA(from, "📭 لا يوجد مصاريف مسجلة بعد.\n\nأرسل مصروفاً مثل: *50 بنزين*");
+        await sendWA(from, "📭 لا يوجد مصاريف مسجلة بعد.\n\nأرسل مصروفاً مثل: *اشتريت بنزين بخمسة ريال*");
       } else {
         const lines = last5.map(e =>
-          `${e.categoryIcon} *${e.description}* — ${e.amount} ${e.currency}\n   📅 ${new Date(e.date).toLocaleDateString("ar-OM")} • ${e.paymentMethod}`
+          `${e.categoryIcon} ${e.description} — *${formatOMR(e.amountOMR, currency)}*\n   📅 ${new Date(e.date).toLocaleDateString("ar-SA-u-ca-gregory")}`
         );
-        await sendWA(from, ["📋 *آخر 5 مصاريف:*", "", ...lines, "", `🌐 ${DASHBOARD_URL}?phone=${from}`].join("\n\n"));
+        await sendWA(from, ["📋 *آخر 5 مصاريف:*", "", ...lines].join("\n\n"));
       }
       return NextResponse.json({ status: "ok" });
     }
 
-    // ════════════════════════════════════════════════════════
-    // أمر: حذف
-    // ════════════════════════════════════════════════════════
-    if (["حذف", "الغ", "undo", "مسح"].includes(lower)) {
-      const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
+    // ─── حذف آخر مصروف ────────────────────────────────────────────
+    if (["حذف", "الغ", "الغي", "undo"].includes(lowerText)) {
+      const expenses: Expense[] = (await KV?.get(`wa:${from}`, "json")) ?? [];
       if (!expenses.length) {
         await sendWA(from, "❌ لا يوجد مصاريف لحذفها.");
       } else {
         const deleted = expenses.pop()!;
-        await KV.put(`wa:${from}`, JSON.stringify(expenses));
-        // تحديث العداد الشهري
-        const sub = await getSubscription(KV, from);
-        if (sub.monthlyCount > 0) { sub.monthlyCount--; await KV.put(`sub:${from}`, JSON.stringify(sub)); }
-        await sendWA(from, `🗑️ تم حذف: *${deleted.description}* — ${deleted.amount} ${deleted.currency}`);
+        await KV?.put(`wa:${from}`, JSON.stringify(expenses));
+        await sendWA(from, `🗑️ تم حذف: *${deleted.description}* — ${formatOMR(deleted.amountOMR, currency)}`);
       }
       return NextResponse.json({ status: "ok" });
     }
 
-    // ════════════════════════════════════════════════════════
-    // أمر: ميزانية
-    // ════════════════════════════════════════════════════════
-    const budgetMatch = text.match(/^ميزانية\s+(\d+(?:[.,]\d+)?)/);
-    if (budgetMatch) {
-      const budget = parseFloat(budgetMatch[1].replace(",", "."));
-      const settings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from) };
-      const userCurrency = settings.currency ?? getCurrencyFromPhone(from);
-      const budgetCfg = CURRENCY_CONFIG[userCurrency] ?? CURRENCY_CONFIG["OMR"];
-      // نخزّن الميزانية بالريال العُماني
-      settings.dailyBudget = budget * budgetCfg.rate;
-      await KV.put(`settings:${from}`, JSON.stringify(settings));
-      await sendWA(from, `✅ تم تعيين ميزانيتك اليومية على *${formatOMR(settings.dailyBudget, userCurrency)}* 💰\n\nسأنبهك عند اقترابك من الحد!`);
-      return NextResponse.json({ status: "ok" });
-    }
+    // ─── تحليل مصاريفي ───────────────────────────────────────────
+    if (["تحليل", "analysis"].includes(lowerText)) {
+      const expenses: Expense[] = (await KV?.get(`wa:${from}`, "json")) ?? [];
+      const now = new Date();
+      const thisMonth = expenses.filter(e => {
+        const d = new Date(e.date);
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+      });
+      const total = thisMonth.reduce((s, e) => s + e.amountOMR, 0);
+      const byCategory: Record<string, number> = {};
+      thisMonth.forEach(e => {
+        byCategory[e.categoryLabel] = (byCategory[e.categoryLabel] ?? 0) + e.amountOMR;
+      });
+      const sorted = Object.entries(byCategory).sort((a, b) => b[1] - a[1]);
+      const lines = sorted.map(([cat, amt]) => `  📌 ${cat}: ${formatOMR(amt, currency)}`);
 
-    // ════════════════════════════════════════════════════════
-    // ردود السياق الذكية
-    // ════════════════════════════════════════════════════════
-
-    // ── 1. تحية ──────────────────────────────────────────────
-    const greetWords = ["هلا","هلاً","هلو","أهلين","اهلين","أهلاً","اهلا","أهلا","مرحبا","مرحبً","مرحباً","السلام عليكم","وعليكم السلام","سلام عليكم","سلام","صباح الخير","مساء الخير","صباح النور","مساء النور","صبح","ماساء","هاي","hi","hello","hey","صباح"];
-    if (greetWords.some(g => lower === g || lower.startsWith(g + " ") || lower.startsWith(g + "،") || lower.startsWith(g + "!"))) {
-      const hour = new Date().getHours();
-      const timeGreet = hour < 12 ? "صباح النور ☀️" : hour < 17 ? "هلاً وسهلاً 🌤️" : "مساء الخير 🌙";
-      const greetReplies = [
-        [
-          `${timeGreet} 👋`,
-          "",
-          "أنا رفيقك المالي، هنا أساعدك تتحكم في مصاريفك بكل سهولة 💙",
-          "",
-          "كيف أقدر أساعدك اليوم؟",
-          "   💰 سجّل مصروف — مثال: *50 بنزين*",
-          "   📊 شوف إنفاقك — أرسل *ملخص*",
-          "   📋 آخر مصاريفك — أرسل *قائمة*",
-        ],
-        [
-          `${timeGreet}! يا هلا 🤩`,
-          "",
-          "وصلت للمكان الصح! أنا رفيقك المالي على واتساب 💙",
-          "",
-          "ابدأ بتسجيل أي مصروف — بس اكتب الرقم والوصف:",
-          "   ✏️ *100 غداء مطعم*",
-          "   ✏️ *30 بيسة قهوة*",
-          "   ✏️ *5 ريال سوبرماركت*",
-          "",
-          "أو أرسل *مساعدة* لتشوف كل اللي أقدر أسويه 😊",
-        ],
-        [
-          `${timeGreet} 😊`,
-          "",
-          "هلا فيك! أنا هنا عشان أساعدك تتابع مصاريفك وتوفر أكثر 💪",
-          "",
-          "جرّب تسجّل أول مصروف الآن:",
-          "   ✏️ اكتب المبلغ + وصف بسيط",
-          "   مثال: *50 بنزين* أو *100 اكل*",
-          "",
-          "وأنا أتكفل بالباقي! 🙌",
-        ],
-      ];
-      await sendWA(from, greetReplies[Math.floor(Math.random() * greetReplies.length)].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 2. كيف الحال / اخبارك ────────────────────────────────
-    const howAreYou = ["كيف الحال","كيف حالك","كيفك","كيف أحوالك","كيف احوالك","شو أخبارك","وش أخبارك","ايش اخبارك","عساك بخير","كيف الأحوال","شخبارك","شخبار","كيف صحتك","عامل كيف","عاملة كيف"];
-    if (howAreYou.some(h => lower.includes(h))) {
-      const replies = [
-        "بخير وعافية، شكراً لسؤالك! 😊💙\n\nأنا دايماً جاهز أساعدك في تتبع مصاريفك.\nوش تبي نسجّل اليوم؟ 📝",
-        "الحمد لله، تمام التمام! 🙏\n\nوأنت كيف أحوالك؟ أتمنى تكون بأحسن حال 😊\nأنا هنا متى احتجت تسجّل مصروف أو تشوف ملخصك!",
-        "زين وبخير، يعطيك العافية على السؤال! 💙\n\nجاهز أخدمك — سجّل مصروف أو أرسل *ملخص* وأعطيك تقرير مصاريفك 📊",
-      ];
-      await sendWA(from, replies[Math.floor(Math.random() * replies.length)]);
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 3. وداع / مع السلامة ─────────────────────────────────
-    const goodbye = ["مع السلامة","باي","bye","وداعاً","وداعا","يسلمك","الله يحفظك","تصبح على خير","تصبحون","ليلة سعيدة","يعطيك العافية","الله يعافيك","في امان الله","في أمان الله"];
-    if (goodbye.some(g => lower.includes(g))) {
-      const replies = [
-        "مع السلامة! 👋 أتمنى لك يوم رائع 🌟\nمتى تحتاجني، أنا هنا دايماً 💙",
-        "يسلمك! إلى اللقاء 😊\nلا تنسى تسجّل مصاريفك — أنا هنا دايماً انتظرك! 💪",
-        "الله يحفظك ويسلمك! 🤲\nأشوفك قريب إن شاء الله 💙",
-      ];
-      await sendWA(from, replies[Math.floor(Math.random() * replies.length)]);
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 4. شكر / إطراء ───────────────────────────────────────
-    const thanks = ["شكرا","شكراً","شكرا لك","تسلم","يسلمو","يسلموا","ما قصرت","مشكور","مشكورين","thank","thanks","ثانكس","ما شاء الله","رائع","ممتاز","حلو","زين","عجبني","أعجبني","والله زين","بارك الله","الله يبارك"];
-    if (thanks.some(t => lower.includes(t))) {
-      const replies = [
-        `العفو! يسعدني أخدمك دايماً 😊💙\n\nتذكّر، أنا هنا 24/7 — متى صرفت شيء، أرسله لي وأسجله فوراً ✅\n\n🌐 داشبوردك: ${DASHBOARD_URL}?phone=${from}`,
-        `الله يبارك فيك! 🙏 كلامك يشجعني 💙\n\nأنا هنا دايماً لمساعدتك تتحكم في مصاريفك.\nاستمر في تسجيل مصاريفك يومياً وستشوف فرقاً كبيراً! 📈`,
-        `يعطيك العافية! كلامك حلو 😊\n\nهدفي أكون رفيقك المالي الموثوق 💪\nأي وقت تحتاجني، أنا هنا! 💙`,
-      ];
-      await sendWA(from, replies[Math.floor(Math.random() * replies.length)]);
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 5. رقم بدون وصف ─────────────────────────────────────
-    const bareNumber = /^[\d٠-٩]+([.,][\d٠-٩]+)?$/.test(text.trim());
-    if (bareNumber) {
       await sendWA(from, [
-        `🤔 شفت الرقم *${text}* — بس على وش صرفته؟`,
+        `📈 *تحليل ${now.toLocaleDateString("ar-SA", { month: "long" })}*`,
+        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
+        `💸 الإجمالي: ${formatOMR(total, currency)}`,
+        `🧾 عدد المعاملات: ${thisMonth.length}`,
         "",
-        "أضف وصف بسيط معه وأسجله لك فوراً:",
-        `   ✏️ *${text} بنزين*`,
-        `   ✏️ *${text} غداء*`,
-        `   ✏️ *${text} سوبرماركت*`,
-        `   ✏️ *${text} دواء*`,
+        "*توزيع الإنفاق:*",
+        ...lines,
         "",
-        "أو اكتب بيسة في النهاية لو المبلغ بالبيسات:",
-        `   ✏️ *${text} بيسة قهوة* ☕`,
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 6. استفسار عن الرصيد / المصاريف ─────────────────────
-    const moneyQ = ["كم صرفت","صرفت كم","كم انفقت","انفقت كم","وين راحت فلوسي","وين الفلوس","رصيدي كم","كم باقي","باقي كم","وين راح","فلوسي","ميزانيتي","مجموع مصاريفي"];
-    if (moneyQ.some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "📊 تبي تعرف وين راحت فلوسك؟ 😄",
-        "",
-        "أرسل *ملخص* وأعطيك تقرير تفصيلي فوري:",
-        "   ✅ إجمالي مصاريف الشهر",
-        "   ✅ تفصيل حسب الفئة",
-        "   ✅ متوسط إنفاقك اليومي",
-        "",
-        "أو شوف الداشبورد المرئي كامل هنا 👇",
         `🌐 ${DASHBOARD_URL}?phone=${from}`,
       ].join("\n"));
       return NextResponse.json({ status: "ok" });
     }
 
-    // ── 7. نصائح مالية ذكية (مخصصة بالدخل الحقيقي) ─────────
-    // تحميل بيانات المستخدم لتشخيص النصائح
-    const adviceSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from), monthlyIncome: 0 };
-    const adviceCurrency = adviceSettings.currency ?? getCurrencyFromPhone(from);
-    const adviceExpenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
-    const userIncome = adviceSettings.monthlyIncome ?? 0;
-    const now2 = new Date();
-    const monthExpenses = adviceExpenses.filter(e => {
-      const d = new Date(e.date);
-      return d.getMonth() === now2.getMonth() && d.getFullYear() === now2.getFullYear();
-    });
-    const totalSpentNow = monthExpenses.reduce((s, e) => s + e.amountOMR, 0);
-    const hasIncome = userIncome > 0;
-    // مساعدات حساب الأرقام الشخصية
-    const carMax = hasIncome ? formatOMR(userIncome * 0.15, adviceCurrency) : "120 (مثال)";
-    const homeMax = hasIncome ? formatOMR(userIncome * 0.28, adviceCurrency) : "280 (مثال)";
-    const saveTarget = hasIncome ? formatOMR(userIncome * 0.20, adviceCurrency) : "160 (مثال)";
-    const emergency3m = hasIncome ? formatOMR(totalSpentNow > 0 ? totalSpentNow * 3 : userIncome * 0.8 * 3, adviceCurrency) : "2,000-3,000 (مثال)";
-    const incomeLabel = hasIncome ? `راتبك ${formatOMR(userIncome, adviceCurrency)}` : "راتبك";
-    const incomeHint = !hasIncome ? "\n\n💡 *نصيحة:* أرسل *راتبي [المبلغ]* وأعطيك أرقامك الشخصية بدقة!" : "";
-
-    // شراء سيارة
-    if (["سيارة","سياره","اشتري سيارة","سيارة جديدة","سيارة مستعملة","كيف اشتري سيارة","ابي سيارة","بدي سيارة","اريد سيارة"].some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "🚗 *خطة شراء السيارة الذكية*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "📌 *الخطوة 1 — حدد ميزانيتك*",
-        `   قاعدة الخبراء: قسط السيارة لا يتجاوز 15٪ من دخلك`,
-        `   بناءً على ${incomeLabel} → *قسط أقصاه ${carMax}* 💡`,
-        "",
-        "📌 *الخطوة 2 — دفعة أولى*",
-        "   حاول تدفع *20٪ على الأقل* من السعر نقداً",
-        "   يقلل الفوائد ويخفف الأقساط 📉",
-        "",
-        "📌 *الخطوة 3 — التكاليف الخفية* ⚠️",
-        "   لا تنسى تحسب:",
-        "   • تأمين شامل (~200-400 ر.ع/سنة)",
-        "   • استهلاك وقود شهري",
-        "   • صيانة دورية (زيت، إطارات...)",
-        "   • رسوم تسجيل وترخيص",
-        "",
-        "📌 *الخطوة 4 — تمويل ذكي*",
-        "   • قارن بين البنوك قبل التوقيع",
-        "   • مدة القرض المثالية: *3-4 سنوات*",
-        "   • تجنب مدة 7 سنوات — تدفع ضعف قيمة السيارة!",
-        "",
-        "📌 *الخطوة 5 — جديدة أم مستعملة؟*",
-        "   السيارة تخسر *20٪ من قيمتها* في أول سنة 📊",
-        "   مستعملة (2-3 سنوات) = نفس الجودة بسعر أقل 💰",
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `💙 أرسل *ملخص* لتشوف وضعك المالي الكامل الآن 📊${incomeHint}`,
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // شراء بيت / منزل
-    if (["بيت","منزل","شقة","شقه","اشتري بيت","اشتري منزل","كيف اشتري بيت","ابي بيت","بناء بيت","قرض عقاري","تمويل عقاري","سكن"].some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "🏠 *خطة شراء البيت — أكبر قرار مالي*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "📌 *الخطوة 1 — ادخر الدفعة الأولى أولاً*",
-        "   البنوك تطلب *10-20٪* دفعة أولى",
-        "   بيت بـ 80,000 ر.ع → تحتاج 8,000-16,000 ر.ع نقداً",
-        "   ابدأ صندوق توفير مخصص للبيت الآن 🏦",
-        "",
-        "📌 *الخطوة 2 — قاعدة الـ 28٪*",
-        `   قسط البيت لا يتجاوز *28٪ من راتبك*`,
-        `   بناءً على ${incomeLabel} → *قسط أقصاه ${homeMax}* 💡`,
-        "",
-        "📌 *الخطوة 3 — تكاليف ما بعد الشراء* ⚠️",
-        "   • صيانة سنوية: ~1٪ من قيمة البيت",
-        "   • تأمين على المنزل",
-        "   • رسوم بلدية وخدمات",
-        "   • أثاث وتجهيز (لا تنساها!)",
-        "",
-        "📌 *الخطوة 4 — اختر التمويل الصح*",
-        "   ✅ بنك نزوى / Bank Muscat / بنك صحار",
-        "   قارن نسبة الفائدة (APR) مش القسط فقط!",
-        "   فرق 0.5٪ = آلاف الريالات على 20 سنة",
-        "",
-        "📌 *الخطوة 5 — خطة التوفير*",
-        "   🎯 حدد المبلغ المطلوب للدفعة الأولى",
-        "   📅 قسّمه على عدد الأشهر",
-        `   💰 وفّر *${saveTarget}* شهرياً تلقائياً أول الشهر`,
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `💡 *نصيحة ذهبية:* رتّب ديونك وحسّن سجلك الائتماني قبل التقديم!${incomeHint}`,
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // توفير وادخار
-    if (["كيف أوفر","كيف اوفر","ابي اوفر","بدي اوفر","طريقة توفير","كيف ادخر","ادخار","توفير","وفّر","خطة توفير","ما اقدر اوفر","مافيه توفير"].some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "💰 *خطة التوفير الذكية — ابدأ اليوم*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "📐 *قاعدة 50/30/20 الذهبية:*",
-        hasIncome ? `   50٪ = ${formatOMR(userIncome*0.50, adviceCurrency)} → ضروريات (إيجار، طعام، فواتير)` : "   50٪ من الراتب → ضروريات",
-        hasIncome ? `   30٪ = ${formatOMR(userIncome*0.30, adviceCurrency)} → رغبات (ترفيه، تسوق، مطاعم)` : "   30٪ من الراتب → رغبات",
-        hasIncome ? `   20٪ = *${saveTarget}* → *توفير وادخار* 🏆` : "   20٪ من الراتب → *توفير وادخار* 🏆",
-        "",
-        "📌 *السر الأول — وفّر قبل ما تصرف!*",
-        `   أول ما يدخل الراتب، حوّل *${saveTarget}* لحساب توفير`,
-        "   لا تنتظر آخر الشهر — ما يبقى شيء! 😅",
-        "",
-        "📌 *السر الثاني — صندوق الطوارئ أولاً*",
-        `   هدفك: *${emergency3m}* (3 أشهر من مصاريفك) 🛡️`,
-        "   هذا درعك ضد المفاجآت",
-        "",
-        "📌 *السر الثالث — قاعدة 24 ساعة* ⏰",
-        "   أي شراء فوق 50 ر.ع — انتظر يوم كامل",
-        "   70٪ من الوقت ستقرر عدم الشراء!",
-        "",
-        "📌 *السر الرابع — أتمتة التوفير*",
-        "   اعمل تحويل تلقائي لحساب التوفير",
-        "   لما ما تشوف الفلوس، ما تصرفها 💡",
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `🚀 أرسل *ملخص* لتشوف أين تذهب فلوسك الآن!${incomeHint}`,
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // سداد ديون
-    if (["دين","ديون","قرض","قروض","سداد","ابي اسدد","كيف اسدد","مديون","بطاقة ائتمان","كريدت"].some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "💳 *خطة سداد الديون — تحرر مالياً*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "أولاً، اعرف وضعك الكامل 📋",
-        "اكتب كل دين مع: المبلغ + الفائدة + القسط",
-        "",
-        "📌 *طريقة كرة الثلج ❄️ (الأسرع نفسياً)*",
-        "   ابدأ بأصغر دين — سدّده كاملاً أولاً",
-        "   ثم انتقل للتالي... تحس بانتصارات متتالية!",
-        "",
-        "📌 *طريقة الانهيار الجليدي 🏔️ (الأوفر مالياً)*",
-        "   ابدأ بأعلى فائدة — يوفر أكثر على المدى البعيد",
-        "   مثال: بطاقة ائتمان (18٪ فائدة) قبل قرض السيارة (5٪)",
-        "",
-        "📌 *قاعدة مهمة — لا ديون جديدة!*",
-        "   بطاقة الائتمان: ادفع الرصيد كاملاً كل شهر",
-        "   وإلا تدفع فوائد تاكل 20٪+ من فلوسك 🚨",
-        "",
-        "📌 *خطوات عملية الآن:*",
-        "   1️⃣ قائمة بكل ديونك",
-        "   2️⃣ ادفع الحد الأدنى للكل",
-        "   3️⃣ أي فلوس زيادة — على أولوية الدين",
-        "   4️⃣ بعد ما تسدد دين، حوّل قسطه للتالي",
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "💙 ابدأ بتتبع مصاريفك لتشوف أين تقدر توفر لسداد ديونك أسرع!",
-        "أرسل *ملخص* لأعطيك صورة واضحة 📊",
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // استثمار
-    if (["استثمار","استثمر","اشتري اسهم","اسهم","عقار للاستثمار","كيف استثمر","فين استثمر","وين استثمر","الذهب","صناديق"].some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "📈 *دليل الاستثمار الذكي*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "⚠️ *قبل الاستثمار — 3 شروط أساسية:*",
-        "   ✅ صندوق طوارئ جاهز (3-6 أشهر مصاريف)",
-        "   ✅ ديونك عالية الفائدة مسددة",
-        "   ✅ عندك فلوس لا تحتاجها لسنوات",
-        "",
-        "📌 *خيارات الاستثمار حسب المخاطرة:*",
-        "",
-        "🟢 *منخفض المخاطرة:*",
-        "   • ودائع بنكية (2-4٪ سنوياً)",
-        "   • سندات حكومة عُمان",
-        "   • ذهب (حماية من التضخم) 🥇",
-        "",
-        "🟡 *متوسط المخاطرة:*",
-        "   • صناديق الاستثمار المتنوعة (Index Funds)",
-        "   • أسهم شركات خليجية راسخة (MSM30)",
-        "   • صناديق العقارات (REITs)",
-        "",
-        "🔴 *عالي المخاطرة:*",
-        "   • أسهم فردية",
-        "   • عملات رقمية",
-        "   • استثمار مباشر في الأعمال",
-        "",
-        "📌 *قاعدة التنويع الذهبية:*",
-        "   لا تضع كل بيضك في سلة واحدة! 🥚",
-        "   وزّع: 60٪ منخفض + 30٪ متوسط + 10٪ عالي",
-        "",
-        "📌 *سر النجاح — الثبات والصبر:*",
-        "   من استثمر 100 ر.ع شهرياً لـ 20 سنة",
-        "   بعائد 7٪ = *52,000 ر.ع* 🤩",
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "💡 أنا لست مستشاراً مالياً معتمداً، لكن أقدر أساعدك تتابع مصاريفك وتوفر للاستثمار!",
-        "أرسل *ملخص* لتشوف كم تقدر توفر شهرياً 📊",
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // إدارة الراتب
-    if (["ادارة راتب","كيف أدير","كيف ادير","خطة مالية","خطه ماليه","تخطيط مالي","راتب ضعيف","ما يكفي الراتب","الراتب ما يكفي","نهاية الشهر"].some(q => lower.includes(q))) {
-      const salaryLines = hasIncome ? [
-        `📐 *توزيع راتبك ${formatOMR(userIncome, adviceCurrency)} المثالي:*`,
-        "",
-        `🏠 *الضروريات (50٪) = ${formatOMR(userIncome*0.50, adviceCurrency)}:*`,
-        `   إيجار + طعام + فواتير + مواصلات`,
-        `   (أنت صرفت هذا الشهر: ${formatOMR(totalSpentNow, adviceCurrency)})`,
-        "",
-        `🎮 *الرغبات (30٪) = ${formatOMR(userIncome*0.30, adviceCurrency)}:*`,
-        `   مطاعم، ترفيه، تسوق، اشتراكات`,
-        "",
-        `💰 *التوفير (20٪) = ${formatOMR(userIncome*0.20, adviceCurrency)}:*`,
-        `   صندوق طوارئ أولاً (هدف: ${emergency3m})`,
-        `   ثم سداد ديون، ثم استثمار`,
-      ] : [
-        "📐 *التوزيع المثالي للراتب:*",
-        "",
-        "🏠 *الضروريات (50٪):* إيجار + طعام + فواتير + مواصلات",
-        "🎮 *الرغبات (30٪):* مطاعم، ترفيه، تسوق، اشتراكات",
-        "💰 *التوفير (20٪):* صندوق طوارئ → ديون → استثمار",
-        "",
-        "💡 *أرسل راتبي [المبلغ] وأعطيك أرقامك الدقيقة!*",
-      ];
-
-      await sendWA(from, [
-        "📋 *خطتك المالية الشخصية*",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        "",
-        "دعني أساعدك تقسّم راتبك بذكاء 🧠",
-        "",
-        ...salaryLines,
-        "",
-        "📌 *3 خطوات لتبدأ الآن:*",
-        "   1️⃣ أرسل *ملخص* وأعطيك تقرير مصاريفك الكامل",
-        "   2️⃣ أنا أعطيك تحليل أين تذهب فلوسك",
-        "   3️⃣ معاً نحدد أين تقدر توفر أكثر 💪",
-        "",
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        hasIncome
-          ? `✅ لديك دخل محفوظ ${formatOMR(userIncome, adviceCurrency)} — أرسل *ملخص* للتحليل الكامل 📊`
-          : "🚀 ابدأ الآن بإرسال *راتبي [مبلغ]* ثم *ملخص* لتحليل مالي دقيق!",
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 7. أسئلة عن البوت / ماذا تفعل ──────────────────────
-    const aboutBot = ["وش تسوي","وش تعرف","ايش تقدر","شو تقدر","كيف تشتغل","كيف تعمل","عيلمني","علمني","شرح لي","ايش هذا","وش هذا","من أنت","مين انت","انت مين","ما هو","ما اعرف"];
-    if (aboutBot.some(q => lower.includes(q))) {
-      await sendWA(from, [
-        "أنا *رفيقك المالي* على واتساب! 💙🤖",
-        "",
-        "أقدر أساعدك في:",
-        "   📝 تسجيل مصاريفك بكل سهولة",
-        "   📊 تقرير شهري كامل لإنفاقك",
-        "   🔔 تنبيه لما تتجاوز ميزانيتك",
-        "   💡 نصايح مالية لكل مصروف",
-        "   🌐 داشبورد مرئي لكل بياناتك",
-        "",
-        "🚀 *ابدأ الآن — سجّل أول مصروف:*",
-        "   مثال: *50 بنزين*",
-        "   مثال: *100 غداء*",
-        "",
-        "أو أرسل *مساعدة* لقائمة كاملة بالأوامر 📋",
-      ].join("\n"));
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ── 8. إيموجي فقط ────────────────────────────────────────
-    const emojiOnly = /^[\p{Emoji}\s]+$/u.test(text.trim());
-    if (emojiOnly && text.trim().length <= 10) {
-      const replies = [
-        "😄 أحب الإيموجي بس أنا بحاجة كلام معاه!\n\nأرسل مصروفك هيك:\n   ✏️ *50 بنزين* أو *100 غداء*",
-        "🙈 ما عرفت أفسّر الإيموجي — جرّب تكتب مصروفك!\n   مثال: *30 قهوة* ☕",
-        "😂 إيموجي حلو! بس أنا بحاجة رقم وكلمة لأسجّل المصروف 😄\n   مثال: *100 تسوق* 🛍️",
-      ];
-      await sendWA(from, replies[Math.floor(Math.random() * replies.length)]);
-      return NextResponse.json({ status: "ok" });
-    }
-
-    // ════════════════════════════════════════════════════════
-    // تسجيل مصروف
-    // ════════════════════════════════════════════════════════
-    const expenseSettings: UserSettings = (await KV.get(`settings:${from}`, "json")) ?? { dailyBudget: 0, currency: getCurrencyFromPhone(from) };
-    const expenseCurrency = expenseSettings.currency ?? getCurrencyFromPhone(from);
-    const expense = parseExpense(text, expenseCurrency);
-    if (expense) {
-      // فحص حد الخطة المجانية
+    // ─── الاشتراك (Premium) ───────────────────────────────────────
+    if (["اشترك", "بريميم", "premium", "ترقية"].includes(lowerText)) {
       const sub = await getSubscription(KV, from);
-      if (!isPremium(sub) && sub.monthlyCount >= FREE_LIMIT) {
-        await sendWA(from, [
-          "⚠️ *وصلت للحد الشهري المجاني!*",
-          "",
-          `لقد سجلت ${FREE_LIMIT} مصروف هذا الشهر.`,
-          "للاستمرار بدون حدود، اشترك في الخطة المميزة:",
-          "",
-          "⭐ *البريميوم: 1.5 ر.ع/شهر فقط*",
-          "",
-          String.fromCodePoint(0x1F517) + " اشترك الآن: " + APP_BASE_URL + "/pricing?phone=" + from,
-        ].join("\n"));
-        return NextResponse.json({ status: "ok" });
+      if (isPremium(sub)) {
+        await sendWA(from, `✅ أنت بالفعل مشترك في الخطة المميزة!\n\nتنتهي في: ${sub.expiresAt ? new Date(sub.expiresAt).toLocaleDateString("ar-SA-u-ca-gregory") : "—"}`);
+      } else {
+        const result = await initAmwalPayment(from, "monthly");
+        if (result.success && result.url) {
+          await sendWA(from, [
+            "⭐ *الاشتراك المميز — 1.5 ر.ع/شهر*",
+            "",
+            "✅ مصاريف غير محدودة",
+            "✅ تقارير متقدمة",
+            "✅ دعم أولوي",
+            "",
+            `💳 للدفع: ${result.url}`,
+          ].join("\n"));
+        } else {
+          await sendWA(from, `❌ خطأ في بوابة الدفع: ${result.error ?? "خطأ غير معروف"}`);
+        }
       }
+      return NextResponse.json({ status: "ok" });
+    }
 
-      // حفظ المصروف
-      const expenses: Expense[] = (await KV.get(`wa:${from}`, "json")) ?? [];
+    // ─── أمر المدير ───────────────────────────────────────────────
+    if (from === ADMIN_PHONE && lowerText.startsWith("admin:")) {
+      const cmd = text.slice(6).trim();
+      if (cmd.startsWith("grant ")) {
+        const targetPhone = cmd.slice(6).trim();
+        const targetSub: Subscription = (await KV?.get(`sub:${targetPhone}`, "json")) ?? {
+          plan: "free", expiresAt: null, activatedAt: null, monthlyCount: 0, lastResetMonth: "",
+        };
+        targetSub.plan = "premium";
+        targetSub.activatedAt = new Date().toISOString();
+        targetSub.expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+        await KV?.put(`sub:${targetPhone}`, JSON.stringify(targetSub));
+        await sendWA(from, `✅ تم منح الاشتراك المميز لـ ${targetPhone}`);
+      } else if (cmd === "stats") {
+        await sendWA(from, `📊 لوحة المدير\n🌐 ${DASHBOARD_URL}?phone=${from}`);
+      }
+      return NextResponse.json({ status: "ok" });
+    }
+
+    // ─── تسجيل مصروف جديد ────────────────────────────────────────
+    const sub = await getSubscription(KV, from);
+    if (!isPremium(sub) && sub.monthlyCount >= FREE_LIMIT) {
+      await sendWA(from, [
+        "⚠️ *وصلت لحد الخطة المجانية*",
+        "",
+        `لقد سجلت ${FREE_LIMIT} مصروف هذا الشهر.`,
+        "للاستمرار بشكل غير محدود، اشترك في الخطة المميزة:",
+        "",
+        "أرسل: *اشترك*",
+      ].join("\n"));
+      return NextResponse.json({ status: "ok" });
+    }
+
+    const expense = parseExpense(text, currency);
+    if (expense) {
+      const expenses: Expense[] = (await KV?.get(`wa:${from}`, "json")) ?? [];
       expenses.push(expense);
-      await KV.put(`wa:${from}`, JSON.stringify(expenses));
+      await KV?.put(`wa:${from}`, JSON.stringify(expenses));
 
-      // تحديث العداد والبروفايل
-      sub.monthlyCount++;
-      await KV.put(`sub:${from}`, JSON.stringify(sub));
-
-      let profile: UserProfile = (await KV.get(`profile:${from}`, "json")) ?? {
+      // تحديث الملف الشخصي
+      let profile: UserProfile = (await KV?.get(`profile:${from}`, "json")) ?? {
         totalExpenses: 0, streak: 0, lastExpenseDate: "", health: 100, happiness: 80,
       };
-      profile.health = profile.health ?? 100;
+      profile.health    = profile.health    ?? 100;
       profile.happiness = profile.happiness ?? 80;
-      profile.totalExpenses++;
       profile = updateStreak(profile);
-      await KV.put(`profile:${from}`, JSON.stringify(profile));
+      profile.totalExpenses++;
+      await KV?.put(`profile:${from}`, JSON.stringify(profile));
 
-      // نصيحة
-      const tips = CATEGORIES[expense.category]?.tips ?? ["تابع مصاريفك يومياً 💡"];
-      const tip  = tips[Math.floor(Math.random() * tips.length)];
+      // تحديث الاشتراك
+      sub.monthlyCount++;
+      await KV?.put(`sub:${from}`, JSON.stringify(sub));
 
-      // مستوى
-      const level = getLevel(profile.totalExpenses);
-      const streakText = profile.streak > 1 ? `🔥 سلسلة الأيام: ${profile.streak} أيام 🔥` : "يوم جديد، بداية جديدة! 🌟";
+      // حساب الإنفاق اليومي (بما في ذلك هذا المصروف الجديد)
+      const today = new Date().toISOString().slice(0, 10);
+      const todayTotal = expenses.filter(e => e.date.startsWith(today)).reduce((s, e) => s + e.amountOMR, 0);
 
-      // فحص الميزانية اليومية (نستخدم expenseSettings المُحمَّلة مسبقاً)
-      let budgetWarning = "";
-      if (expenseSettings.dailyBudget > 0) {
-        const today = new Date().toISOString().slice(0, 10);
-        const todayExpenses = expenses.filter(e => e.date.startsWith(today));
-        const todayTotal = todayExpenses.reduce((s, e) => s + e.amountOMR, 0);
-        const ratio = todayTotal / expenseSettings.dailyBudget;
-        if (ratio >= 1)       budgetWarning = `\n🚨 *تنبيه:* تجاوزت ميزانيتك اليومية! (${formatOMR(todayTotal, expenseCurrency)} من ${formatOMR(expenseSettings.dailyBudget, expenseCurrency)})`;
-        else if (ratio >= 0.8) budgetWarning = `\n⚠️ *تنبيه:* اقتربت من ميزانيتك اليومية (${Math.round(ratio * 100)}%)`;
-      }
+      // نصيحة عشوائية
+      const catTips = CATEGORIES[expense.category]?.tips ?? ["تابع مصاريفك يومياً 💡"];
+      const tip = catTips[Math.floor(Math.random() * catTips.length)];
 
-      // رسالة التسجيل
-      const perInstallment = expense.amountOMR / expense.totalInstallments;
+      const remaining = remainingFree(sub);
+
       await sendWA(from, [
-        "✅ *تم تسجيل المصروف بنجاح!*",
-        "┄┄┄ التفاصيل ┄┄┄",
-        `📂 الفئة: ${expense.categoryLabel}`,
-        expense.subcategory ? `🏷️ الفئة الفرعية: ${expense.subcategory}` : "",
-        `📅 التاريخ: ${new Date().toLocaleDateString("ar-OM")}`,
-        `💰 المبلغ: ${expense.amount} ${expense.currency}`,
-        `💵 طريقة الدفع: ${expense.paymentMethod}`,
-        `📝 الوصف: ${expense.description}`,
-        `🔢 تقسيط: ${expense.installments}/${expense.totalInstallments}`,
-        `💲 كل قسط: ${formatOMR(perInstallment, expenseCurrency)}`,
-        `🧾 الإجمالي: ${formatOMR(expense.amountOMR, expenseCurrency)}`,
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `💡 نصيحة: ${tip}`,
-        "┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄",
-        `🌟 رفيقك المالي ${level.icon} (المستوى ${level.num} — ${level.name})`,
-        `❤️ الصحة: ${profile.health}٪`,
-        `😊 السعادة: ${profile.happiness}٪`,
-        streakText,
-        !isPremium(sub) ? `\n📌 مجاني: ${remainingFree(sub)} مصروف متبقي هذا الشهر` : "",
-        budgetWarning,
+        `تم تسجيل المصروف بنجاح!`,
+        `┄┄┄ التفاصيل ┄┄┄`,
+        ` الفئة: ${expense.categoryLabel}`,
+        ` التاريخ: ${new Date().toLocaleDateString("ar-SA-u-ca-gregory")}`,
+        ` المبلغ: ${formatOMR(expense.amountOMR, currency)}`,
+        ` طريقة الدفع: ${expense.paymentMethod}`,
+        ` الوصف: ${expense.description}`,
+        `┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄`,
+        ` نصيحة: ${tip}`,
+        `┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄┄`,
+        ` 📊 الإنفاق اليومي: ${formatOMR(todayTotal, currency)}`,
+        ` 🔥 سلسلة الأيام: ${profile.streak} يوم`,
+        ...(isPremium(sub) ? [] : [` 🎯 مجاني متبقي: ${remaining} مصروف`]),
         `🌐 ${DASHBOARD_URL}?phone=${from}`,
-      ].filter(l => l !== "").join("\n"));
+      ].join("\n"));
     } else {
-      // رد ذكي ودافئ على ما لم يُفهم
-      const funnyResponses = [
-        "🤔 ما وصلت بالضبط، بس ما تقلق!",
-        "😅 والله ما فهمت قصدك، بس أنا هنا!",
-        "🙈 يبدو الرسالة راحت عليّ!",
-      ];
-      const opener = funnyResponses[Math.floor(Math.random() * funnyResponses.length)];
       await sendWA(from, [
-        opener,
+        "❓ لم أفهم الرسالة.",
         "",
-        "أنا أفهم المصاريف — سجّل أي مصروف هيك:",
-        "   ✏️ *50 بنزين*",
-        "   ✏️ *100 ريال غداء مطعم*",
-        "   ✏️ *500 بيسة قهوة*",
-        "   ✏️ *خمسة ريال كرك*",
-        "   ✏️ *درهمين نقد*",
+        "💡 *أمثلة:*",
+        "  اشتريت عشا بريالين",
+        "  5 ريال بنزين",
+        "  دفعت 3.500 دواء",
         "",
-        "أو اختار من الأوامر:",
-        "   📊 *ملخص* — شوف إنفاقك الشهري",
-        "   📋 *قائمة* — آخر مصاريفك",
-        "   💳 *اشتراك* — ترقية للبريميوم",
-        "   ❓ *مساعدة* — كل الأوامر المتاحة",
-        "",
-        "أنا هنا دايماً 💙",
+        "أرسل *مساعدة* لعرض كل الأوامر",
       ].join("\n"));
     }
 
