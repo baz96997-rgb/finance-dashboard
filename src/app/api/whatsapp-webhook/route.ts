@@ -464,11 +464,21 @@ function buildPersonalAnalysis(
 }
 
 // ─── إرسال واتساب ────────────────────────────────────────────
+// حل مشكلة surrogate pairs التي ينتجها esbuild
+function fixEmoji(s: string): string {
+  return s.replace(/\uD([89AB][0-9A-Fa-f]{2})\uD([C-Fc-f][0-9A-Fa-f]{2})/g,
+    (_, h, l) => String.fromCodePoint(
+      0x10000 + ((parseInt(h, 16) - 0x800) << 10) + (parseInt(l, 16) - 0xC00)
+    )
+  );
+}
 async function sendWA(to: string, body: string) {
+  const safe = fixEmoji(body);
+  const jsonBody = JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body: safe } });
   await fetch(`https://graph.facebook.com/v21.0/${PHONE_NUMBER_ID}/messages`, {
     method: "POST",
-    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ messaging_product: "whatsapp", to, type: "text", text: { body } }),
+    headers: { Authorization: `Bearer ${ACCESS_TOKEN}`, "Content-Type": "application/json; charset=utf-8" },
+    body: new TextEncoder().encode(jsonBody),
   });
 }
 
@@ -631,27 +641,49 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ status: "ok" });
       }
 
-      // عرض خيارات الاشتراك
-      await sendWA(from, [
-        "💎 *ترقية إلى البريميوم*",
+      // عرض خيارات الاشتراك مع روابط دفع مباشرة
+      await sendWA(from, String.fromCodePoint(0x23F3) + " جاري تجهيز روابط الدفع...");
+      const [monthly, yearly] = await Promise.all([
+        initAmwalPayment(from, "monthly"),
+        initAmwalPayment(from, "yearly"),
+      ]);
+      const gem   = String.fromCodePoint(0x1F48E); // 💎
+      const starF = String.fromCodePoint(0x1F31F); // 🌟
+      const chk   = String.fromCodePoint(0x2705);  // ✅
+      const lnk   = String.fromCodePoint(0x1F517); // 🔗
+      const cal1  = String.fromCodePoint(0x1F4C5); // 📅
+      const cal2  = String.fromCodePoint(0x1F4C6); // 📆
+      const party = String.fromCodePoint(0x1F389); // 🎉
+      const msgLines = [
+        gem + " *ترقية إلى البريميوم*",
         "",
-        "🆓 *خطتك الحالية:*",
+        "*خطتك الحالية:*",
         `   ${remainingFree(sub)} مصروف متبقي من ${FREE_LIMIT} هذا الشهر`,
         "",
-        "⭐ *البريميوم يمنحك:*",
-        "   ✅ تسجيل غير محدود للمصاريف",
-        "   ✅ تقارير متقدمة وإحصائيات",
-        "   ✅ تنبيهات ذكية للميزانية",
-        "   ✅ تصدير PDF",
+        starF + " *البريميوم يمنحك:*",
+        "   " + chk + " تسجيل غير محدود للمصاريف",
+        "   " + chk + " تقارير متقدمة وإحصائيات",
+        "   " + chk + " تنبيهات ذكية للميزانية",
+        "   " + chk + " تصدير PDF",
         "",
-        "💰 *الأسعار:*",
-        "   📅 شهري: 1.5 ر.ع",
-        "   📆 سنوي: 15 ر.ع (شهران مجاناً 🎁)",
-        "",
-        "اختر خطتك:",
-        "👉 أرسل *اشتراك شهري*",
-        "👉 أرسل *اشتراك سنوي*",
-      ].join("\n"));
+        "*روابط الدفع الفوري:*",
+      ];
+      if (monthly.success && monthly.url) {
+        msgLines.push(cal1 + " *شهري — 1.5 ر.ع:*");
+        msgLines.push(lnk + " " + monthly.url);
+      } else {
+        msgLines.push(cal1 + " شهري 1.5 ر.ع — أرسل *اشتراك شهري*");
+      }
+      msgLines.push("");
+      if (yearly.success && yearly.url) {
+        msgLines.push(cal2 + " *سنوي — 15 ر.ع (شهران مجاناً):*");
+        msgLines.push(lnk + " " + yearly.url);
+      } else {
+        msgLines.push(cal2 + " سنوي 15 ر.ع — أرسل *اشتراك سنوي*");
+      }
+      msgLines.push("");
+      msgLines.push(party + " بعد الدفع يتفعل اشتراكك تلقائياً");
+      await sendWA(from, msgLines.join("\n"));
       return NextResponse.json({ status: "ok" });
     }
 
@@ -1197,7 +1229,7 @@ export async function POST(req: NextRequest) {
           "",
           "⭐ *البريميوم: 1.5 ر.ع/شهر فقط*",
           "",
-          "👉 أرسل *اشتراك* لتفعيل حسابك",
+          String.fromCodePoint(0x1F4AC) + " أرسل *اشتراك* للحصول على رابط الدفع الفوري",
         ].join("\n"));
         return NextResponse.json({ status: "ok" });
       }
