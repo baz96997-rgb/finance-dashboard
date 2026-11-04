@@ -113,7 +113,7 @@ export default function DashboardPage() {
             مرحباً، {user?.name ?? ""}! 👋
           </h1>
           <p style={{ color: "var(--text-muted)", marginTop: "4px", fontSize: "0.85rem" }}>
-            {now.toLocaleDateString("ar-SA", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+            {now.toLocaleDateString("ar-SA-u-ca-gregory", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
           </p>
         </div>
         {/* زر الإضافة السريعة للديسكتوب */}
