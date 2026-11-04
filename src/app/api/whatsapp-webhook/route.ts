@@ -229,8 +229,8 @@ function extractAmount(text: string, defaultCurrency = "OMR"): { amount: number;
     "مئتين": 200, "ميتين": 200, "خمسمية": 500, "الف": 1000, "ألف": 1000,
   };
 
-  // ريالين / درهمين (صيغة المثنى)
-  const dual = t.match(/ريالين|درهمين|دينارين/);
+  // ريالين / درهمين (صيغة المثنى) - تشمل بريالين/بدرهمين
+  const dual = t.match(/ب?ريالين|ب?درهمين|ب?دينارين/);
   if (dual) {
     const curr = dual[0].includes("ريالين") ? "ر.ع" : dual[0].includes("درهمين") ? "درهم" : "د.ك";
     const info = CURRENCIES[curr];
@@ -1230,6 +1230,8 @@ export async function POST(req: NextRequest) {
       let profile: UserProfile = (await KV.get(`profile:${from}`, "json")) ?? {
         totalExpenses: 0, streak: 0, lastExpenseDate: "", health: 100, happiness: 80,
       };
+      profile.health = profile.health ?? 100;
+      profile.happiness = profile.happiness ?? 80;
       profile.totalExpenses++;
       profile = updateStreak(profile);
       await KV.put(`profile:${from}`, JSON.stringify(profile));
