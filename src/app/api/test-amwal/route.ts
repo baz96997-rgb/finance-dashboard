@@ -8,8 +8,8 @@ const AMWAL_KEY      = process.env.AMWALPAY_SECURE_KEY ?? "";
 const AMWAL_BASE     = "https://webhook.amwalpg.com";
 const APP_BASE_URL   = "https://finance-dashboard-ca6.pages.dev";
 
-function hexToBytes(hex: string): Uint8Array<ArrayBuffer> {
-  const b = new Uint8Array(hex.length / 2) as Uint8Array<ArrayBuffer>;
+function hexToBytes(hex: string): Uint8Array {
+  const b = new Uint8Array(hex.length / 2);
   for (let i = 0; i < hex.length; i += 2) b[i/2] = parseInt(hex.substr(i,2),16);
   return b;
 }
